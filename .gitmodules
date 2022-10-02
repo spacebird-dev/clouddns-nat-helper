@@ -1,0 +1,3 @@
+[submodule "vendor/cloudflare-rs"]
+	path = vendor/cloudflare-rs
+	url = git@github.com:maxhoesel/cloudflare-rs.git

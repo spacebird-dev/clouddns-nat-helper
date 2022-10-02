@@ -6,9 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cloudflare = "0.9.1"
 domain = "0.7.0"
 http = "0.2.8"
+log = "0.4.17"
 serde = "1.0.145"
+serde_json = "1.0.85"
 
-[dependencies.cloudflare]
-path = "vendor/cloudflare-rs"
+[patch.crates-io]
+cloudflare = { git = "https://github.com/maxhoesel/cloudflare-rs" }

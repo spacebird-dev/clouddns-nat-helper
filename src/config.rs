@@ -5,10 +5,17 @@ pub enum Ipv4AddressSource {
     Static { address: net::Ipv4Addr },
 }
 
+pub enum Policy {
+    CreateOnly,
+    Upsert,
+}
+
 pub struct Config {
     pub cloudflare_api_token: String,
-    pub cloudflare_zone_name: Option<String>,
     pub ipv4_address_source: Ipv4AddressSource,
+    pub ttl: Option<u32>,
+    pub cloudflare_proxied: Option<bool>,
+    pub policy: Policy,
 }
 
 impl Config {
