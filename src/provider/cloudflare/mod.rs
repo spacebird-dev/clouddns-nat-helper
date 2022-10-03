@@ -3,12 +3,9 @@ mod wrapper;
 
 use log::{info, trace};
 
-use crate::{
-    plan::{Action, Plan},
-    types,
-};
+use crate::plan::{Action, Plan};
 
-use super::{Provider, ProviderError};
+use super::{DnsRecord, Provider, ProviderError};
 use wrapper::CloudflareWrapper;
 
 pub struct CloudflareProvider {
@@ -36,7 +33,7 @@ impl CloudflareProvider {
 }
 
 impl Provider for CloudflareProvider {
-    fn read_records(&self) -> Result<Vec<types::DnsRecord>, ProviderError> {
+    fn records(&self) -> Result<Vec<DnsRecord>, ProviderError> {
         info!("Reading zones from Cloudflare API");
         let zones = self.api.list_zones()?.result;
         trace!("Collected zones {:?}", zones);
@@ -47,8 +44,8 @@ impl Provider for CloudflareProvider {
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .flat_map(|f| f.result)
-            .filter_map(|r| types::DnsRecord::try_from(&r).ok())
-            .collect::<Vec<types::DnsRecord>>();
+            .filter_map(|r| DnsRecord::try_from(&r).ok())
+            .collect::<Vec<DnsRecord>>();
         trace!("Collected Records: {:?}", records);
         Ok(records)
     }

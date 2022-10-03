@@ -1,4 +1,15 @@
-use crate::types::DnsRecord;
+use std::{
+    collections::HashMap,
+    net::{Ipv4Addr, Ipv6Addr},
+};
+
+use crate::{config::Policy, provider::DnsRecord};
+
+struct Domain {
+    a: Vec<Ipv4Addr>,
+    aaaa: Vec<Ipv6Addr>,
+    txt: Vec<String>,
+}
 
 #[derive(Debug)]
 pub struct Plan {
@@ -6,9 +17,7 @@ pub struct Plan {
 }
 
 impl Plan {
-    fn new() -> Plan {
-        todo!()
-    }
+    // With registry, lookup owned records and get values
 }
 
 #[derive(Debug)]

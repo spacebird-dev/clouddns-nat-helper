@@ -1,6 +1,6 @@
 use cloudflare::{endpoints, framework::response::ApiFailure};
 
-use crate::{provider::ProviderError, types};
+use crate::provider::{DnsRecord, ProviderError, RecordContent};
 
 impl From<ApiFailure> for ProviderError {
     fn from(f: ApiFailure) -> Self {
@@ -13,19 +13,17 @@ impl From<ApiFailure> for ProviderError {
     }
 }
 
-impl TryFrom<&endpoints::dns::DnsRecord> for types::DnsRecord {
+impl TryFrom<&endpoints::dns::DnsRecord> for DnsRecord {
     type Error = String;
 
     fn try_from(r: &endpoints::dns::DnsRecord) -> Result<Self, Self::Error> {
         let converted_content = match &r.content {
-            endpoints::dns::DnsContent::A { content } => types::RecordContent::A(*content),
-            endpoints::dns::DnsContent::AAAA { content } => types::RecordContent::Aaaa(*content),
-            endpoints::dns::DnsContent::TXT { content } => {
-                types::RecordContent::Txt(content.clone())
-            }
+            endpoints::dns::DnsContent::A { content } => RecordContent::A(*content),
+            endpoints::dns::DnsContent::AAAA { content } => RecordContent::Aaaa(*content),
+            endpoints::dns::DnsContent::TXT { content } => RecordContent::Txt(content.clone()),
             _ => return Err(format!("Invalid record type: {:?}", r.content)),
         };
-        Ok(types::DnsRecord {
+        Ok(DnsRecord {
             name: r.name.clone(),
             content: converted_content,
             ttl: r.ttl,
@@ -33,12 +31,12 @@ impl TryFrom<&endpoints::dns::DnsRecord> for types::DnsRecord {
     }
 }
 
-impl From<types::RecordContent> for endpoints::dns::DnsContent {
-    fn from(c: types::RecordContent) -> Self {
+impl From<RecordContent> for endpoints::dns::DnsContent {
+    fn from(c: RecordContent) -> Self {
         match &c {
-            types::RecordContent::A(a) => endpoints::dns::DnsContent::A { content: *a },
-            types::RecordContent::Aaaa(aaaa) => endpoints::dns::DnsContent::AAAA { content: *aaaa },
-            types::RecordContent::Txt(txt) => endpoints::dns::DnsContent::TXT {
+            RecordContent::A(a) => endpoints::dns::DnsContent::A { content: *a },
+            RecordContent::Aaaa(aaaa) => endpoints::dns::DnsContent::AAAA { content: *aaaa },
+            RecordContent::Txt(txt) => endpoints::dns::DnsContent::TXT {
                 content: txt.to_string(),
             },
         }

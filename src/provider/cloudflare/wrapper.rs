@@ -9,10 +9,7 @@ use cloudflare::{
     },
 };
 
-use crate::{
-    provider::{self, ProviderError},
-    types,
-};
+use crate::provider::{self, DnsRecord, ProviderError, RecordContent};
 
 const CLOUDFLARE_ZONE_PAGE_SIZE: u8 = 50;
 const CLOUDFLARE_RECORD_PAGE_SIZE: u16 = 5000;
@@ -183,7 +180,7 @@ impl CloudflareWrapper {
         }
     }
 
-    pub fn find_record_zone(&self, record: &types::DnsRecord) -> Option<&endpoints::zone::Zone> {
+    pub fn find_record_zone(&self, record: &DnsRecord) -> Option<&endpoints::zone::Zone> {
         let mut zones = self
             .cache
             .zones
@@ -195,25 +192,22 @@ impl CloudflareWrapper {
         zones.pop()
     }
 
-    pub fn find_record_endpoint(
-        &self,
-        record: &types::DnsRecord,
-    ) -> Option<&endpoints::dns::DnsRecord> {
+    pub fn find_record_endpoint(&self, record: &DnsRecord) -> Option<&endpoints::dns::DnsRecord> {
         self.cache
             .records
             .iter()
             .filter(|r| {
                 r.name == record.name
                     || match &record.content {
-                        types::RecordContent::A(a) => match &r.content {
+                        RecordContent::A(a) => match &r.content {
                             endpoints::dns::DnsContent::A { content } => a == content,
                             _ => false,
                         },
-                        types::RecordContent::Aaaa(aaaa) => match &r.content {
+                        RecordContent::Aaaa(aaaa) => match &r.content {
                             endpoints::dns::DnsContent::AAAA { content } => aaaa == content,
                             _ => false,
                         },
-                        types::RecordContent::Txt(txt) => match &r.content {
+                        RecordContent::Txt(txt) => match &r.content {
                             endpoints::dns::DnsContent::TXT { content } => txt == content,
                             _ => false,
                         },

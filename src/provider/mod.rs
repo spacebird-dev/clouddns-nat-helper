@@ -1,10 +1,11 @@
 mod cloudflare;
 
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    net::{Ipv4Addr, Ipv6Addr},
+};
 
-use crate::config::Config;
 use crate::plan::Plan;
-use crate::types::DnsRecord;
 
 // Generic error returned by a provider action
 #[derive(Debug)]
@@ -29,5 +30,18 @@ impl From<String> for ProviderError {
 // Providers implement a few basic methods to access their cloud DNS registry for reading and writing records
 pub trait Provider {
     fn apply_plan(&self, plan: Plan) -> Vec<Result<(), ProviderError>>;
-    fn read_records(&self) -> Result<Vec<DnsRecord>, ProviderError>;
+    fn records(&self) -> Result<Vec<DnsRecord>, ProviderError>;
+}
+
+#[derive(Debug)]
+pub struct DnsRecord {
+    pub name: String,
+    pub content: RecordContent,
+    pub ttl: u32,
+}
+#[derive(Debug)]
+pub enum RecordContent {
+    A(Ipv4Addr),
+    Aaaa(Ipv6Addr),
+    Txt(String),
 }
