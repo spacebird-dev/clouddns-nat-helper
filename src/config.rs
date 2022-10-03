@@ -1,3 +1,5 @@
+use std::net::Ipv4Addr;
+
 use domain::base::net;
 
 pub enum Ipv4AddressSource {
@@ -11,11 +13,15 @@ pub enum Policy {
 }
 
 pub struct Config {
-    pub cloudflare_api_token: String,
-    pub ipv4_address_source: Ipv4AddressSource,
-    pub ttl: Option<u32>,
-    pub cloudflare_proxied: Option<bool>,
+    pub source: Ipv4AddressSource,
     pub policy: Policy,
+
+    pub record_ttl: Option<u32>,
+
+    pub cloudflare_api_token: String,
+    pub cloudflare_proxied: Option<bool>,
+
+    pub fixed_address: Option<Ipv4Addr>,
 }
 
 impl Config {

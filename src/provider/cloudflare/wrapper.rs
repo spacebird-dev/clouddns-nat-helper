@@ -76,8 +76,8 @@ impl CloudflareWrapper {
     pub fn list_records(
         &self,
         zone_id: &str,
-        name: &Option<String>,
-        kind: &Option<endpoints::dns::DnsContent>,
+        name: Option<String>,
+        kind: Option<endpoints::dns::DnsContent>,
     ) -> ApiResponse<Vec<endpoints::dns::DnsRecord>> {
         let mut r = self.paged_request(
             CLOUDFLARE_RECORD_PAGE_SIZE.into(),
@@ -98,7 +98,7 @@ impl CloudflareWrapper {
         // just the variant.
         if let Some(selector) = kind {
             r.result.retain(|rec| {
-                std::mem::discriminant(&rec.content) == std::mem::discriminant(selector)
+                std::mem::discriminant(&rec.content) == std::mem::discriminant(&selector)
             });
         }
 
@@ -111,7 +111,7 @@ impl CloudflareWrapper {
         name: &str,
         ttl: &Option<u32>,
         proxied: &Option<bool>,
-        content: &endpoints::dns::DnsContent,
+        content: endpoints::dns::DnsContent,
     ) -> ApiResponse<endpoints::dns::DnsRecord> {
         self.client.request(&endpoints::dns::CreateDnsRecord {
             zone_identifier: zone_id,
@@ -120,7 +120,7 @@ impl CloudflareWrapper {
                 ttl: *ttl,
                 proxied: *proxied,
                 name,
-                content: content.clone(),
+                content,
             },
         })
     }
@@ -132,7 +132,7 @@ impl CloudflareWrapper {
         name: &str,
         ttl: &Option<u32>,
         proxied: &Option<bool>,
-        content: &endpoints::dns::DnsContent,
+        content: endpoints::dns::DnsContent,
     ) -> ApiResponse<endpoints::dns::DnsRecord> {
         self.client.request(&endpoints::dns::UpdateDnsRecord {
             zone_identifier: zone_id,
@@ -141,7 +141,7 @@ impl CloudflareWrapper {
                 ttl: *ttl,
                 proxied: *proxied,
                 name,
-                content: content.clone(),
+                content,
             },
         })
     }
@@ -179,7 +179,7 @@ impl CloudflareWrapper {
                 wrapper.cache = cache;
                 Ok(wrapper)
             }
-            Err(e) => Err(e.to_string()),
+            Err(e) => Err(ProviderError { msg: e.to_string() }),
         }
     }
 
@@ -233,15 +233,11 @@ struct FinderCache {
 }
 impl FinderCache {
     fn try_new(wrapper: &CloudflareWrapper) -> Result<FinderCache, ProviderError> {
-        let zones = wrapper.list_zones().map_err(|e| e.to_string())?.result;
+        let zones = wrapper.list_zones()?.result;
 
         let records = zones
             .iter()
-            .map(|z| {
-                wrapper
-                    .list_records(&z.id, &None, &None)
-                    .map_err(|e| e.to_string())
-            })
+            .map(|z| wrapper.list_records(&z.id, None, None))
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .flat_map(|f| f.result)
