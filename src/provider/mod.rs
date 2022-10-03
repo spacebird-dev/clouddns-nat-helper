@@ -37,11 +37,32 @@ pub trait Provider {
 pub struct DnsRecord {
     pub name: String,
     pub content: RecordContent,
-    pub ttl: u32,
+    pub ttl: Option<u32>,
 }
+
+impl Display for DnsRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.name, self.content)
+    }
+}
+
 #[derive(Debug)]
 pub enum RecordContent {
     A(Ipv4Addr),
     Aaaa(Ipv6Addr),
     Txt(String),
+}
+
+impl Display for RecordContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                RecordContent::A(a) => format!("A {}", a),
+                RecordContent::Aaaa(aaaa) => format!("AAAA {}", aaaa),
+                RecordContent::Txt(txt) => format!("TXT {}", txt),
+            }
+        )
+    }
 }

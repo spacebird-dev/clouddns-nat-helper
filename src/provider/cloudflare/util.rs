@@ -20,13 +20,13 @@ impl TryFrom<&endpoints::dns::DnsRecord> for DnsRecord {
         let converted_content = match &r.content {
             endpoints::dns::DnsContent::A { content } => RecordContent::A(*content),
             endpoints::dns::DnsContent::AAAA { content } => RecordContent::Aaaa(*content),
-            endpoints::dns::DnsContent::TXT { content } => RecordContent::Txt(content.clone()),
+            endpoints::dns::DnsContent::TXT { content } => RecordContent::Txt(content.to_owned()),
             _ => return Err(format!("Invalid record type: {:?}", r.content)),
         };
         Ok(DnsRecord {
-            name: r.name.clone(),
+            name: r.name.to_owned(),
             content: converted_content,
-            ttl: r.ttl,
+            ttl: Some(r.ttl),
         })
     }
 }
@@ -37,7 +37,7 @@ impl From<RecordContent> for endpoints::dns::DnsContent {
             RecordContent::A(a) => endpoints::dns::DnsContent::A { content: *a },
             RecordContent::Aaaa(aaaa) => endpoints::dns::DnsContent::AAAA { content: *aaaa },
             RecordContent::Txt(txt) => endpoints::dns::DnsContent::TXT {
-                content: txt.to_string(),
+                content: txt.to_owned(),
             },
         }
     }

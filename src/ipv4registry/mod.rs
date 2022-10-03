@@ -10,20 +10,22 @@ use crate::{plan::Plan, provider::Provider};
 /// to prevent overwriting records not owned by us.
 pub trait Ipv4Registry {
     /// Returns a list of domains currently owned by us
-    fn owned_domains() -> Vec<Domain>;
+    fn owned_domains(&self) -> Vec<Domain>;
     /// Attempt to register a new domain for us. Fails if the domain is already owned by someone else
-    fn register_domain(domain: Domain) -> Result<(), RegistryError>;
+    fn register_domain(&self, name: DomainName) -> Result<(), RegistryError>;
     /// Apply the given plan to the specified provider, ensuring that ownership is preserved
-    fn apply_plan(plan: Plan, provider: dyn Provider);
+    fn apply_plan(&self, plan: Plan, provider: dyn Provider);
 }
 
 #[derive(Debug)]
 pub struct Domain {
-    pub name: String,
+    pub name: DomainName,
     pub a: Vec<Ipv4Addr>,
     pub aaaa: Vec<Ipv6Addr>,
     pub txt: Vec<String>,
 }
+
+pub type DomainName = String;
 
 #[derive(Debug)]
 pub struct RegistryError {
@@ -31,7 +33,7 @@ pub struct RegistryError {
 }
 
 impl Display for RegistryError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.msg.as_str())
     }
 }

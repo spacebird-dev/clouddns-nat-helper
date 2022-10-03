@@ -10,6 +10,7 @@ pub enum Ipv4AddressSource {
 pub enum Policy {
     CreateOnly,
     Upsert,
+    Sync,
 }
 
 pub struct Config {

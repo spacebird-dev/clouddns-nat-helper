@@ -83,7 +83,7 @@ impl CloudflareWrapper {
                     zone_identifier: zone_id,
                     params: endpoints::dns::ListDnsRecordsParams {
                         page: Some(page_counter),
-                        name: name.clone(),
+                        name: name.to_owned(),
                         per_page: Some(CLOUDFLARE_RECORD_PAGE_SIZE.into()),
                         ..Default::default()
                     },
@@ -114,27 +114,6 @@ impl CloudflareWrapper {
             zone_identifier: zone_id,
             params: endpoints::dns::CreateDnsRecordParams {
                 priority: None,
-                ttl: *ttl,
-                proxied: *proxied,
-                name,
-                content,
-            },
-        })
-    }
-
-    pub fn update_record(
-        &self,
-        zone_id: &str,
-        record_id: &str,
-        name: &str,
-        ttl: &Option<u32>,
-        proxied: &Option<bool>,
-        content: endpoints::dns::DnsContent,
-    ) -> ApiResponse<endpoints::dns::DnsRecord> {
-        self.client.request(&endpoints::dns::UpdateDnsRecord {
-            zone_identifier: zone_id,
-            identifier: record_id,
-            params: endpoints::dns::UpdateDnsRecordParams {
                 ttl: *ttl,
                 proxied: *proxied,
                 name,

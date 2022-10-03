@@ -70,28 +70,6 @@ impl Provider for CloudflareProvider {
                         .map(|_| ())
                         .map_err(|e| e.into())
                 }
-                Action::Update(r) => {
-                    info!("Performing action UPDATE for Record: {:?}", r);
-                    self.api
-                        .update_record(
-                            &self
-                                .api
-                                .find_record_zone(&r)
-                                .ok_or(format!("Could not find suitable zone for record {:?}", r))?
-                                .id,
-                            &self
-                                .api
-                                .find_record_endpoint(&r)
-                                .ok_or(format!("Could not find suitable zone for record {:?}", r))?
-                                .id,
-                            &r.name,
-                            &self.ttl,
-                            &self.proxied,
-                            r.content.into(),
-                        )
-                        .map_err(|e| e.into())
-                        .map(|_| ())
-                }
                 Action::Delete(r) => {
                     info!("Performing action DELETE for Record: {:?}", r);
                     self.api
