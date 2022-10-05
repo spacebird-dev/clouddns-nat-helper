@@ -1,4 +1,4 @@
-mod util;
+mod traits;
 mod wrapper;
 
 use log::{info, trace};

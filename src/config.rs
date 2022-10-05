@@ -23,6 +23,8 @@ pub struct Config {
     pub cloudflare_proxied: Option<bool>,
 
     pub fixed_address: Option<Ipv4Addr>,
+
+    pub txt_tenant: String,
 }
 
 impl Config {
