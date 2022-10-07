@@ -10,32 +10,31 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Plan {
-    pub actions: Vec<Action>,
+    pub create_actions: Vec<DnsRecord>,
+    pub delete_actions: Vec<DnsRecord>,
 }
 
 impl Plan {
-    // Generate a CREATE action for a given name and address
-    fn create_a_action(name: DomainName, addr: &Ipv4Addr) -> Action {
-        let c = Action::Create(DnsRecord {
-            name,
+    // Generate a dns record for a given name and address
+    fn create_a_action(name: DomainName, addr: &Ipv4Addr) -> DnsRecord {
+        let c = DnsRecord {
+            domain: name,
             content: crate::provider::RecordContent::A(*addr),
             ttl: None,
-        });
+        };
         debug!("{}", c);
         c
     }
 
-    // Generate a list of DELETE actions for all A records associated with a domain
-    fn delete_a_actions(domain: &Domain) -> Vec<Action> {
+    // Generate a list of DELETE records actions for all A records associated with a domain
+    fn delete_a_actions(domain: &Domain) -> Vec<DnsRecord> {
         domain
             .a
             .iter()
-            .map(|addr| {
-                Action::Delete(DnsRecord {
-                    name: domain.name.to_owned(),
-                    content: crate::provider::RecordContent::A(*addr),
-                    ttl: None,
-                })
+            .map(|addr| DnsRecord {
+                domain: domain.name.to_owned(),
+                content: crate::provider::RecordContent::A(*addr),
+                ttl: None,
             })
             .inspect(|a| debug!("{}", a))
             .collect()
@@ -45,12 +44,13 @@ impl Plan {
     // based on a Ipv6 recod set
     pub fn generate(
         ipv6domains: Vec<DomainName>,
-        registry: &dyn ARegistry,
+        registry: &mut dyn ARegistry,
         desired_address: &Ipv4Addr,
         policy: Policy,
     ) -> Plan {
         let mut plan = Plan {
-            actions: Vec::new(),
+            create_actions: Vec::new(),
+            delete_actions: Vec::new(),
         };
 
         let owned = registry
@@ -71,13 +71,13 @@ impl Plan {
                         "Found outdated A record(s) for domain {}, updating",
                         current.name
                     );
-                    plan.actions.extend(Plan::delete_a_actions(current));
-                    plan.actions
+                    plan.delete_actions.extend(Plan::delete_a_actions(current));
+                    plan.create_actions
                         .push(Plan::create_a_action(v6name.to_owned(), desired_address));
                 }
-            } else if registry.register_domain(v6name.to_owned()).is_ok() {
-                info!("Registered new AAAA domain {}", v6name);
-                plan.actions
+            } else if registry.claim(v6name).is_ok() {
+                info!("Claimed new domain {}", v6name);
+                plan.create_actions
                     .push(Plan::create_a_action(v6name.to_owned(), desired_address));
             }
             // We weren't able to register this domain, skip it
@@ -92,30 +92,11 @@ impl Plan {
                         "No more AAAA records associated with domain {}, deleting",
                         domain.name
                     );
-                    plan.actions.extend(Plan::delete_a_actions(domain));
+                    plan.delete_actions.extend(Plan::delete_a_actions(domain));
                 }
             }
         }
 
         plan
-    }
-}
-
-#[derive(Debug)]
-pub enum Action {
-    Create(DnsRecord),
-    Delete(DnsRecord),
-}
-
-impl Display for Action {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Action::Create(r) => format!("Create {}", r),
-                Action::Delete(r) => format!("Delete {}", r),
-            }
-        )
     }
 }

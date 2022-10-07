@@ -8,7 +8,7 @@ use std::{
 use crate::plan::Plan;
 
 // Generic error returned by a provider action
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ProviderError {
     msg: String,
 }
@@ -30,23 +30,25 @@ impl From<String> for ProviderError {
 // Providers implement a few basic methods to access their cloud DNS registry for reading and writing records
 pub trait Provider {
     fn apply_plan(&self, plan: Plan) -> Vec<Result<(), ProviderError>>;
+    fn create_record(&self, record: DnsRecord) -> Result<(), ProviderError>;
+    fn delete_record(&self, record: DnsRecord) -> Result<(), ProviderError>;
     fn records(&self) -> Result<Vec<DnsRecord>, ProviderError>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DnsRecord {
-    pub name: String,
+    pub domain: String,
     pub content: RecordContent,
     pub ttl: Option<u32>,
 }
 
 impl Display for DnsRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.name, self.content)
+        write!(f, "{}: {}", self.domain, self.content)
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RecordContent {
     A(Ipv4Addr),
     Aaaa(Ipv6Addr),

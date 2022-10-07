@@ -3,9 +3,7 @@ mod hostname;
 
 use std::{fmt::Display, net::Ipv4Addr};
 
-use crate::config::Config;
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SourceError {
     msg: String,
 }

@@ -10,8 +10,8 @@ pub struct HostnameSource {
 }
 
 pub struct HostnameSourceConfig {
-    hostname: String,
-    servers: Vec<SocketAddr>,
+    pub hostname: String,
+    pub servers: Vec<SocketAddr>,
 }
 
 /* the domain crate does have DNS resolving builtin, we could switch to that in the future */

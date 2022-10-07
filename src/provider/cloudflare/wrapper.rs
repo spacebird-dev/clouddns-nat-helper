@@ -164,7 +164,7 @@ impl CloudflareWrapper {
             .cache
             .zones
             .iter()
-            .filter(|z| record.name == z.name || record.name.ends_with(&z.name))
+            .filter(|z| record.domain == z.name || record.domain.ends_with(&z.name))
             .collect::<Vec<_>>();
 
         zones.sort_by(|a, b| a.name.len().cmp(&b.name.len()));
@@ -176,7 +176,7 @@ impl CloudflareWrapper {
             .records
             .iter()
             .filter(|r| {
-                r.name == record.name
+                r.name == record.domain
                     || match &record.content {
                         RecordContent::A(a) => match &r.content {
                             endpoints::dns::DnsContent::A { content } => a == content,

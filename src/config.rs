@@ -13,8 +13,13 @@ pub enum Policy {
     Sync,
 }
 
+pub enum Provider {
+    Cloudflare,
+}
+
 pub struct Config {
     pub source: Ipv4AddressSource,
+    pub provider: Provider,
     pub policy: Policy,
 
     pub record_ttl: Option<u32>,

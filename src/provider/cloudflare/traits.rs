@@ -8,7 +8,7 @@ impl From<ApiFailure> for ProviderError {
             ApiFailure::Error(s, errs) => ProviderError {
                 msg: format!("[{}] {:?}", s, errs.errors),
             },
-            ApiFailure::Invalid(_) => todo!(),
+            ApiFailure::Invalid(e) => ProviderError { msg: e.to_string() },
         }
     }
 }
@@ -24,7 +24,7 @@ impl TryFrom<&endpoints::dns::DnsRecord> for DnsRecord {
             _ => return Err(format!("Invalid record type: {:?}", r.content)),
         };
         Ok(DnsRecord {
-            name: r.name.to_owned(),
+            domain: r.name.to_owned(),
             content: converted_content,
             ttl: Some(r.ttl),
         })
