@@ -4,11 +4,13 @@ use dnsclient::{sync::DNSClient, UpstreamServer};
 
 use super::{Ipv4Source, SourceError};
 
+#[derive(Debug)]
 pub struct HostnameSource {
     hostname: String,
     client: DNSClient,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct HostnameSourceConfig {
     pub hostname: String,
     pub servers: Vec<SocketAddr>,
@@ -34,20 +36,21 @@ impl Ipv4Source for HostnameSource {
 }
 
 impl HostnameSource {
-    fn from_config(config: HostnameSourceConfig) -> Result<Self, SourceError> {
+    pub fn from_config(config: &HostnameSourceConfig) -> Result<Box<dyn Ipv4Source>, SourceError> {
         let client = DNSClient::new(
             config
                 .servers
-                .into_iter()
+                .iter()
+                .copied()
                 .map(UpstreamServer::new)
                 .collect(),
         );
         let source = HostnameSource {
-            hostname: config.hostname,
+            hostname: config.hostname.to_owned(),
             client,
         };
         match source.addr() {
-            Ok(_) => Ok(source),
+            Ok(_) => Ok(Box::new(source)),
             Err(e) => Err(format!(
                 "could not initialize HostnameSource (mabye your hostname is invalid)?: {}",
                 e

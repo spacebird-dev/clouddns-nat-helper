@@ -1,40 +1,45 @@
 mod traits;
 mod wrapper;
 
-use log::{debug, info, trace};
+use log::{debug, trace};
 
-use crate::plan::Plan;
+use crate::{config::TTL, plan::Plan};
 
 use super::{DnsRecord, Provider, ProviderError};
 use wrapper::CloudflareWrapper;
 
 pub struct CloudflareProvider {
     api: CloudflareWrapper,
-    ttl: Option<u32>,
+    ttl: Option<TTL>,
     proxied: Option<bool>,
+    dry_run: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CloudflareProviderConfig<'a> {
     pub api_token: &'a str,
-    pub ttl: Option<u32>,
     pub proxied: Option<bool>,
+    pub dry_run: bool,
 }
 
 impl CloudflareProvider {
-    fn from_config(config: &CloudflareProviderConfig) -> Result<Self, ProviderError> {
+    pub fn from_config(
+        config: &CloudflareProviderConfig,
+    ) -> Result<Box<dyn Provider>, ProviderError> {
         let api = CloudflareWrapper::try_new(config.api_token)?;
 
-        Ok(CloudflareProvider {
+        Ok(Box::new(CloudflareProvider {
             api,
-            ttl: config.ttl,
+            ttl: None,
             proxied: config.proxied,
-        })
+            dry_run: config.dry_run,
+        }))
     }
 }
 
 impl Provider for CloudflareProvider {
     fn records(&self) -> Result<Vec<DnsRecord>, ProviderError> {
-        info!("Reading zones from Cloudflare API");
+        debug!("Reading zones from Cloudflare API");
         let zones = self.api.list_zones()?.result;
         trace!("Collected zones {:?}", zones);
 
@@ -65,50 +70,67 @@ impl Provider for CloudflareProvider {
     }
 
     fn create_record(&self, rec: DnsRecord) -> Result<(), ProviderError> {
-        let r = self
+        let zone_id = &self
             .api
-            .create_record(
-                &self
-                    .api
-                    .find_record_zone(&rec)
-                    .ok_or(format!("Could not find suitable zone for record {}", rec))?
-                    .id,
-                &rec.domain,
-                &self.ttl,
-                &self.proxied,
-                rec.content.to_owned().into(),
-            )
-            .map(|_| ())
-            .map_err(|e| e.into());
-        if r.is_ok() {
-            info!("Created record {}", rec);
+            .find_record_zone(&rec)
+            .ok_or(format!("Could not find suitable zone for record {}", rec))?
+            .id;
+
+        if !self.dry_run {
+            self.api
+                .create_record(
+                    zone_id,
+                    &rec.domain,
+                    &self.ttl,
+                    &self.proxied,
+                    rec.content.to_owned().into(),
+                )
+                .map_err(|e| ProviderError { msg: e.to_string() })?;
         }
-        r
+        debug!("Created record {} in zone {}", rec, zone_id);
+        Ok(())
     }
 
     fn delete_record(&self, rec: DnsRecord) -> Result<(), ProviderError> {
-        let r = self
+        let zone_id = &self
             .api
-            .delete_record(
-                &self
-                    .api
-                    .find_record_zone(&rec)
-                    .ok_or(format!("Could not find suitable zone for record {}", rec))?
-                    .id,
-                &self
-                    .api
-                    .find_record_endpoint(&rec)
-                    .ok_or(format!(
-                        "Could not find matching record id for record {}",
-                        rec
-                    ))?
-                    .id,
-            )
-            .map_err(|e| e.into())
-            .map(|_| ());
-        if r.is_ok() {
-            info!("Deleted record {}", rec);
-        };
-        r
+            .find_record_zone(&rec)
+            .ok_or(format!("Could not find suitable zone for record {}", rec))?
+            .id;
+        let record_id = &self
+            .api
+            .find_record_endpoint(&rec)
+            .ok_or(format!(
+                "Could not find matching record id for record {}",
+                rec
+            ))?
+            .id;
+
+        if !self.dry_run {
+            self.api
+                .delete_record(zone_id, record_id)
+                .map_err(|e| ProviderError { msg: e.to_string() })?;
+        }
+        debug!(
+            "Deleted record {} with id {} from zone {}",
+            rec, record_id, zone_id
+        );
+        Ok(())
+    }
+
+    fn supports_dry_run(&self) -> bool {
+        true
+    }
+
+    fn set_dry_run(&mut self, dry_run: bool) {
+        self.dry_run = dry_run;
+    }
+
+    fn ttl(&self) -> Option<TTL> {
+        self.ttl
+    }
+
+    fn set_ttl(&mut self, ttl: TTL) {
+        self.ttl = Some(ttl);
     }
 }

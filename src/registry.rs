@@ -1,5 +1,7 @@
 mod txt;
 
+pub use txt::TxtRegistry;
+
 use std::{
     fmt::Display,
     net::{Ipv4Addr, Ipv6Addr},
@@ -18,7 +20,7 @@ pub trait ARegistry {
     fn release(&mut self, name: &DomainName) -> Result<(), RegistryError>;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Domain {
     pub name: DomainName,
     pub a: Vec<Ipv4Addr>,
@@ -28,7 +30,7 @@ pub struct Domain {
 
 pub type DomainName = String;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RegistryError {
     msg: String,
 }

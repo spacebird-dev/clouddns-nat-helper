@@ -1,5 +1,5 @@
-mod config;
-mod ipv4source;
-mod plan;
-mod provider;
-mod registry;
+pub mod config;
+pub mod ipv4source;
+pub mod plan;
+pub mod provider;
+pub mod registry;

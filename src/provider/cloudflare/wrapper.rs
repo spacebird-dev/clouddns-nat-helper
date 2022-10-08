@@ -9,7 +9,10 @@ use cloudflare::{
     },
 };
 
-use crate::provider::{self, DnsRecord, ProviderError, RecordContent};
+use crate::{
+    config::TTL,
+    provider::{self, DnsRecord, ProviderError, RecordContent},
+};
 
 const CLOUDFLARE_ZONE_PAGE_SIZE: u8 = 50;
 const CLOUDFLARE_RECORD_PAGE_SIZE: u16 = 5000;
@@ -106,7 +109,7 @@ impl CloudflareWrapper {
         &self,
         zone_id: &str,
         name: &str,
-        ttl: &Option<u32>,
+        ttl: &Option<TTL>,
         proxied: &Option<bool>,
         content: endpoints::dns::DnsContent,
     ) -> ApiResponse<endpoints::dns::DnsRecord> {

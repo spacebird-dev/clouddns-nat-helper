@@ -3,12 +3,13 @@ mod util;
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use log::{info, warn};
+use log::{debug, info, warn};
 
 use self::util::{rec_into_d, txt_record_string, TXT_RECORD_IDENT};
 use super::{ARegistry, Domain, DomainName, RegistryError};
 use crate::provider::{DnsRecord, Provider, RecordContent};
 
+#[derive(Debug, Clone, PartialEq)]
 enum Ownership {
     /// This domains A record belongs to us
     Owned,
@@ -17,18 +18,20 @@ enum Ownership {
     /// This domain doesn't have A records, we can claim it
     Available,
 }
+
+#[derive(Debug, Clone)]
 struct RegisteredDomain {
     domain: Domain,
     ownership: Ownership,
 }
 
-pub struct TxtRegistry {
+pub struct TxtRegistry<'a> {
     domains: HashMap<DomainName, RegisteredDomain>,
     tenant: String,
-    provider: Box<dyn Provider>,
+    provider: &'a dyn Provider,
 }
 
-impl TxtRegistry {
+impl TxtRegistry<'_> {
     /// Determine the current ownership status for a given domain
     fn determine_ownership(domain: &Domain, tenant: &str) -> Ownership {
         let owner_records: Vec<&String> = domain
@@ -65,7 +68,11 @@ impl TxtRegistry {
         }
     }
 
-    pub fn new(records: Vec<DnsRecord>, tenant: String, provider: Box<dyn Provider>) -> Self {
+    pub fn create(
+        records: Vec<DnsRecord>,
+        tenant: String,
+        provider: &dyn Provider,
+    ) -> Box<dyn ARegistry + '_> {
         let tenant = tenant.replace(TXT_RECORD_IDENT, "");
         let mut domains: HashMap<String, RegisteredDomain> = HashMap::new();
 
@@ -94,40 +101,19 @@ impl TxtRegistry {
             domain.ownership = TxtRegistry::determine_ownership(&domain.domain, &tenant);
         }
 
-        TxtRegistry {
+        Box::new(TxtRegistry {
             domains,
             tenant,
             provider,
-        }
-    }
-
-    fn action_record_is_valid(&self, rec: &DnsRecord) -> bool {
-        if !self.domains.contains_key(&rec.domain) {
-            warn!(
-                "Plan contains action for unknown domain {}, dropping",
-                rec.domain
-            );
-            return false;
-        }
-
-        match self.domains.get(&rec.domain).unwrap().ownership {
-            Ownership::Owned => true,
-            _ => {
-                warn!(
-                    "Plan wants to modify unowned domain {}, dropping",
-                    rec.domain
-                );
-                false
-            }
-        }
+        })
     }
 }
 
-impl ARegistry for TxtRegistry {
+impl ARegistry for TxtRegistry<'_> {
     fn owned_domains(&self) -> Vec<super::Domain> {
         self.domains
             .values()
-            .filter(|d| matches!(d.ownership, Ownership::Owned))
+            .filter(|d| d.ownership == Ownership::Owned)
             .map(|d| d.domain.clone())
             .collect_vec()
     }
@@ -149,7 +135,10 @@ impl ARegistry for TxtRegistry {
                 Ok(())
             }
             Ownership::Taken => Err(RegistryError {
-                msg: format!("Domain {} cannot be claimed", name),
+                msg: format!(
+                    "Domain {} already has A records and no ownership record",
+                    name
+                ),
             }),
             Ownership::Available => {
                 self.provider
@@ -159,10 +148,10 @@ impl ARegistry for TxtRegistry {
                         ttl: None,
                     })
                     .map_err(|e| RegistryError {
-                        msg: format!("unable to claim domain {}: {}", name, e),
+                        msg: format!("Unable to claim domain {}: {}", name, e),
                     })?;
                 reg_d.ownership = Ownership::Owned;
-                info!("Sucessfully claimed domain {}", name);
+                debug!("Successfully claimed domain {}", name);
                 Ok(())
             }
         }
@@ -188,7 +177,7 @@ impl ARegistry for TxtRegistry {
                         msg: format!("unable to release domain {}: {}", name, e),
                     })?;
                 reg_d.ownership = Ownership::Owned;
-                info!("Sucessfully released domain {}", name);
+                debug!("Sucessfully released domain {}", name);
                 Ok(())
             }
             Ownership::Taken => Err(RegistryError {

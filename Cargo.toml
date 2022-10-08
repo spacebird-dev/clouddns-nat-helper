@@ -2,19 +2,22 @@
 name = "cloddns-nat-helper"
 version = "0.1.0"
 edition = "2021"
+description = "Autogenerate A records for NAT setups from AAA records in cloud providers"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "4.0.10", features = ["derive"] }
+clap = { version = "4.0.10", features = ["derive", "env"] }
 cloudflare = "0.9.1"
 dnsclient = "0.1.17"
 domain = { version = "0.7.0" }
+env_logger = "0.9.1"
 http = "0.2.8"
 itertools = "0.10.5"
 log = "0.4.17"
 serde = "1.0.145"
 serde_json = "1.0.85"
+tokio = { version = "1.21.2", features = ["time", "macros"] }
 
 [patch.crates-io]
 cloudflare = { git = "https://github.com/maxhoesel/cloudflare-rs" }

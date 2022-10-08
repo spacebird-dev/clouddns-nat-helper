@@ -1,39 +1,44 @@
-use std::net::Ipv4Addr;
+#![allow(non_camel_case_types)]
+use clap::ValueEnum;
+use log::LevelFilter;
 
-use domain::base::net;
-
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, ValueEnum)]
 pub enum Ipv4AddressSource {
-    Ipify,
-    Static { address: net::Ipv4Addr },
+    Hostname,
+    Fixed,
 }
 
+// This is essentially a re-creation of log:Level. However, that enum doesn't derive ValueEnum, so we have to do it manually here
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, ValueEnum)]
+pub enum Loglevel {
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+impl From<Loglevel> for LevelFilter {
+    fn from(ll: Loglevel) -> Self {
+        match ll {
+            Loglevel::Error => LevelFilter::Error,
+            Loglevel::Warn => LevelFilter::Warn,
+            Loglevel::Info => LevelFilter::Info,
+            Loglevel::Debug => LevelFilter::Debug,
+            Loglevel::Trace => LevelFilter::Trace,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, ValueEnum)]
 pub enum Policy {
     CreateOnly,
     Upsert,
     Sync,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, ValueEnum)]
 pub enum Provider {
     Cloudflare,
 }
 
-pub struct Config {
-    pub source: Ipv4AddressSource,
-    pub provider: Provider,
-    pub policy: Policy,
-
-    pub record_ttl: Option<u32>,
-
-    pub cloudflare_api_token: String,
-    pub cloudflare_proxied: Option<bool>,
-
-    pub fixed_address: Option<Ipv4Addr>,
-
-    pub txt_tenant: String,
-}
-
-impl Config {
-    fn default() {}
-
-    fn new(/* Get input here somehow*/) {}
-}
+pub type TTL = u32;
