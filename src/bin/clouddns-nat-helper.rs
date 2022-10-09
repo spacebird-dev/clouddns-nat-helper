@@ -32,10 +32,6 @@ async fn main() {
     loop {
         let job_cfg = cli.clone();
 
-        if cli.dry_run {
-            info!("Running in dry-run mode, no changes to the DNS provider will be made");
-        }
-
         trace!("Starting worker thread");
         let r = task::spawn_blocking(|| run_job(job_cfg)).await;
         match r {
@@ -67,7 +63,7 @@ fn get_source(cli: &Cli) -> Result<Box<dyn Ipv4Source>, SourceError> {
             })
         }
         cloddns_nat_helper::config::Ipv4AddressSource::Fixed => Ok(
-            ipv4source::FixedSource::create(cli.ipv4_fixed_address.unwrap()),
+            ipv4source::FixedSource::from_addr(cli.ipv4_fixed_address.unwrap()),
         ),
     }
 }
@@ -78,7 +74,6 @@ fn get_provider(cli: &Cli) -> Result<Box<dyn Provider>, ProviderError> {
             provider::CloudflareProvider::from_config(&provider::CloudflareProviderConfig {
                 api_token: cli.cloudflare_api_token.to_owned().unwrap().as_str(),
                 proxied: Some(cli.cloudflare_proxied),
-                dry_run: cli.dry_run,
             })
         }
     }
@@ -86,7 +81,7 @@ fn get_provider(cli: &Cli) -> Result<Box<dyn Provider>, ProviderError> {
 
 fn run_job(cli: Cli) -> Result<(), ()> {
     // TODO: Create the provider and source in main() and pass them to the worker instead of recreating them every time
-    let provider = match get_provider(&cli) {
+    let mut provider = match get_provider(&cli) {
         Ok(p) => {
             info!("Connected to provider");
             p
@@ -96,6 +91,18 @@ fn run_job(cli: Cli) -> Result<(), ()> {
             return Err(());
         }
     };
+    if cli.dry_run {
+        if provider.supports_dry_run() {
+            provider.set_dry_run(cli.dry_run);
+            info!("Running in dry-run mode, no changes to the DNS provider will be made");
+        } else {
+            panic!("Selected provider does not support dry-run");
+        }
+    }
+    if cli.record_ttl.is_some() {
+        provider.set_ttl(cli.record_ttl.unwrap());
+    }
+
     let source = match get_source(&cli) {
         Ok(s) => {
             info!("Created IPv4 source");
