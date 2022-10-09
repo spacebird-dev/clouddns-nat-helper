@@ -149,3 +149,35 @@ impl Provider for CloudflareProvider {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn should_support_dry_run() {
+        panic!()
+        // To test, just don't mock the wrapper methods
+    }
+
+    #[test]
+    fn should_return_records() {
+        panic!()
+    }
+
+    #[test]
+    fn should_create_record() {
+        // Read mockall input to verify
+        panic!()
+    }
+
+    #[test]
+    fn should_delete_record() {
+        // Read mockall input to verify
+        panic!()
+    }
+
+    #[test]
+    fn should_apply_plan() {
+        // Read number of mock calls to verify
+        panic!()
+    }
+}

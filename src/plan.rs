@@ -1,6 +1,6 @@
 use std::{collections::HashMap, net::Ipv4Addr};
 
-use log::{debug, info, trace};
+use log::{info, trace};
 
 use crate::{
     config::Policy,
@@ -125,5 +125,13 @@ impl Plan {
         }
 
         plan
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn should_generate_valid_plan() {
+        panic!()
     }
 }

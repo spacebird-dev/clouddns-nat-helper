@@ -53,7 +53,7 @@ impl HostnameSource {
         match source.addr() {
             Ok(_) => Ok(Box::new(source)),
             Err(e) => Err(format!(
-                "could not initialize HostnameSource (mabye your hostname is invalid)?: {}",
+                "could not initialize HostnameSource (maybe your hostname is invalid)?: {}",
                 e
             )
             .into()),
