@@ -114,16 +114,15 @@ fn run_job(cli: Cli) -> Result<(), ()> {
         }
     };
 
-    let all_records = match provider.records().map_err(|e| e.to_string()) {
-        Ok(r) => {
-            info!("Retrieved records from provider");
-            r
-        }
+    let mut registry = match TxtRegistry::from_provider(cli.registry_tenant, provider.as_ref()) {
+        Ok(r) => r,
         Err(e) => {
-            error!("Could not retrieve records from provider: {}", e);
+            error!("COuld not create registry: {}", e);
             return Err(());
         }
     };
+    info!("Initialized registry");
+
     let target_addr = match source.addr().map_err(|e| e.to_string()) {
         Ok(a) => a,
         Err(e) => {
@@ -131,9 +130,6 @@ fn run_job(cli: Cli) -> Result<(), ()> {
             return Err(());
         }
     };
-
-    let mut registry = TxtRegistry::create(all_records, cli.registry_tenant, provider.as_ref());
-    info!("Initialized registry");
 
     // Calculate our plan that we will apply. This also registers domain where possible
     info!("Generating plan and registering domains...");

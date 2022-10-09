@@ -7,7 +7,7 @@ use log::{debug, info, warn};
 
 use self::util::{insert_rec_into_d, txt_record_string, TXT_RECORD_IDENT};
 use super::{ARegistry, Domain, DomainName, Ownership, RegistryError};
-use crate::provider::{DnsRecord, Provider};
+use crate::provider::Provider;
 
 #[non_exhaustive]
 pub struct TxtRegistry<'a> {
@@ -53,16 +53,18 @@ impl TxtRegistry<'_> {
         }
     }
 
-    pub fn create(
-        records: Vec<DnsRecord>,
+    /// Create a new [`TxtRegistry`] from a given provider
+    /// As the TxtRegistry uses TXT records in the same zone for ownership, it needs a provider to manage ownership.
+    /// This provider is also used to retrieve all records during creation
+    pub fn from_provider(
         tenant: String,
         provider: &dyn Provider,
-    ) -> Box<dyn ARegistry + '_> {
+    ) -> Result<Box<dyn ARegistry + '_>, RegistryError> {
         let tenant = tenant.replace(TXT_RECORD_IDENT, "");
         let mut domains: HashMap<String, Domain> = HashMap::new();
 
         // Create a map of all domains that we will watch over
-        for rec in &records {
+        for rec in &provider.records().map_err(|e| e.to_string())? {
             if let Some(d) = domains.get_mut(&rec.domain_name) {
                 // Update an existing domain
                 insert_rec_into_d(rec, d);
@@ -84,11 +86,11 @@ impl TxtRegistry<'_> {
             domain.a_ownership = TxtRegistry::determine_ownership(domain, &tenant);
         }
 
-        Box::new(TxtRegistry {
+        Ok(Box::new(TxtRegistry {
             domains,
             tenant,
             provider,
-        })
+        }))
     }
 }
 
@@ -282,9 +284,11 @@ mod tests {
 
     #[test]
     fn detects_owned_domains() {
-        let provider_mock: Box<dyn Provider> = Box::new(MockProvider::new());
+        let mut mock = MockProvider::new();
+        mock.expect_records().return_once(|| Ok(records()));
+        let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let rg = TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         assert!(rg.owned_domains().len() == 1);
         assert_eq!(rg.owned_domains().get(0).unwrap(), &owned_d());
@@ -293,25 +297,31 @@ mod tests {
     #[test]
     fn claims_available_domain() {
         let mut mock = MockProvider::new();
-        mock.expect_create_txt_record()
-            .times(1)
-            .returning(|_, _| Ok(()));
+        mock.expect_records().return_once(|| Ok(records()));
+        mock.expect_create_txt_record().return_once(|_, _| Ok(()));
         let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let mut rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let mut rg =
+            TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         rg.claim(available_d().name).unwrap();
 
         assert!(rg.owned_domains().len() == 2);
         assert!(rg.owned_domains().contains(&owned_d()));
-        assert!(rg.owned_domains().contains(&available_d()));
+        let mut available_d = available_d();
+        available_d.a_ownership = crate::registry::Ownership::Owned;
+
+        assert!(rg.owned_domains().contains(&available_d));
     }
 
     #[test]
     fn ignores_claimm_on_owned_domain() {
-        let provider_mock: Box<dyn Provider> = Box::new(MockProvider::new());
+        let mut mock = MockProvider::new();
+        mock.expect_records().return_once(|| Ok(records()));
+        let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let mut rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let mut rg =
+            TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         let before = rg.owned_domains();
         rg.claim(owned_d().name).unwrap();
@@ -324,9 +334,12 @@ mod tests {
 
     #[test]
     fn errors_on_taken_domain_claim() {
-        let provider_mock: Box<dyn Provider> = Box::new(MockProvider::new());
+        let mut mock = MockProvider::new();
+        mock.expect_records().return_once(|| Ok(records()));
+        let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let mut rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let mut rg =
+            TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         rg.claim(taken_d().name).unwrap_err();
 
@@ -336,9 +349,12 @@ mod tests {
 
     #[test]
     fn errors_on_other_owner_domain_claim() {
-        let provider_mock: Box<dyn Provider> = Box::new(MockProvider::new());
+        let mut mock = MockProvider::new();
+        mock.expect_records().return_once(|| Ok(records()));
+        let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let mut rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let mut rg =
+            TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         rg.claim(other_owner_d().name).unwrap_err();
 
@@ -349,12 +365,12 @@ mod tests {
     #[test]
     fn releases_owned_domain() {
         let mut mock = MockProvider::new();
-        mock.expect_delete_txt_record()
-            .times(1)
-            .returning(|_, _| Ok(()));
+        mock.expect_records().return_once(|| Ok(records()));
+        mock.expect_delete_txt_record().return_once(|_, _| Ok(()));
         let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let mut rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let mut rg =
+            TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         rg.release(owned_d().name).unwrap();
         assert!(rg.owned_domains().is_empty());
@@ -362,9 +378,12 @@ mod tests {
 
     #[test]
     fn ignores_release_on_available() {
-        let provider_mock: Box<dyn Provider> = Box::new(MockProvider::new());
+        let mut mock = MockProvider::new();
+        mock.expect_records().return_once(|| Ok(records()));
+        let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let mut rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let mut rg =
+            TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         rg.release(available_d().name).unwrap();
 
@@ -374,9 +393,12 @@ mod tests {
 
     #[test]
     fn errors_on_other_owner_release() {
-        let provider_mock: Box<dyn Provider> = Box::new(MockProvider::new());
+        let mut mock = MockProvider::new();
+        mock.expect_records().return_once(|| Ok(records()));
+        let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let mut rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let mut rg =
+            TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         rg.release(other_owner_d().name).unwrap_err();
         rg.release(taken_d().name).unwrap_err();
@@ -387,27 +409,36 @@ mod tests {
 
     #[test]
     fn errors_on_claiming_unknown_domain() {
-        let provider_mock: Box<dyn Provider> = Box::new(MockProvider::new());
+        let mut mock = MockProvider::new();
+        mock.expect_records().return_once(|| Ok(records()));
+        let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let mut rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let mut rg =
+            TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         rg.claim("unknown.example.com".to_string()).unwrap_err();
     }
 
     #[test]
     fn errors_on_releasing_unknown_domain() {
-        let provider_mock: Box<dyn Provider> = Box::new(MockProvider::new());
+        let mut mock = MockProvider::new();
+        mock.expect_records().return_once(|| Ok(records()));
+        let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let mut rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let mut rg =
+            TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         rg.release("unknown.example.com".to_string()).unwrap_err();
     }
 
     #[test]
     fn ignores_conflicting_domains() {
-        let provider_mock: Box<dyn Provider> = Box::new(MockProvider::new());
+        let mut mock = MockProvider::new();
+        mock.expect_records().return_once(|| Ok(records()));
+        let provider_mock: Box<dyn Provider> = Box::new(mock);
 
-        let mut rg = TxtRegistry::create(records(), TENANT.to_string(), provider_mock.as_ref());
+        let mut rg =
+            TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         assert!(!rg.owned_domains().contains(&conflict_d()));
 
