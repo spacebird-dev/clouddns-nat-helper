@@ -31,7 +31,7 @@ pub struct HostnameSourceConfig {
 
 impl Ipv4Source for HostnameSource {
     fn addr(&self) -> Result<Ipv4Addr, SourceError> {
-        match self.client.query_a(&self.hostname) {
+        match self.client.query_a(self.hostname.as_str()) {
             Ok(addrs) => match addrs.get(0) {
                 Some(a) => Ok(a.to_owned()),
                 None => Err(SourceError {
@@ -75,9 +75,17 @@ impl HostnameSource {
 
 #[cfg(test)]
 mod tests {
+    use std::net::{Ipv4Addr, SocketAddr};
+
+    use super::{HostnameSource, HostnameSourceConfig};
 
     #[test]
     fn should_return_ip_address() {
-        panic!()
+        let src = HostnameSource::from_config(&HostnameSourceConfig {
+            hostname: "google.com".to_string(),
+            servers: vec![SocketAddr::new(Ipv4Addr::new(8, 8, 8, 8).into(), 53)],
+        })
+        .unwrap();
+        src.addr().unwrap();
     }
 }
