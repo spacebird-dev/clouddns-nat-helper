@@ -1,0 +1,5 @@
+[tasks.coverage-llvm-cov]
+install_crate = "cargo-llvm-cov"
+command = "cargo"
+args = ["llvm-cov", "--lcov", "--output-path", "lcov.info"]
+dependencies = ["test"]

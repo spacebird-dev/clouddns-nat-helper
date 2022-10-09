@@ -24,3 +24,6 @@ go.work
 # Added by cargo
 
 /target
+
+# Coverage
+lcov.info

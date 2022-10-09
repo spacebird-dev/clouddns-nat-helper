@@ -18,10 +18,10 @@ pub trait ARegistry {
     fn owned_domains(&self) -> Vec<Domain>;
     /// Attempts to claim a domain by name with the registry's backend.
     /// Returns a result containing [`Ok`] if the domain is claimed or a [`RegistryError`] if the domain could not be claimed.
-    fn claim(&mut self, name: &DomainName) -> Result<(), RegistryError>;
+    fn claim(&mut self, name: DomainName) -> Result<(), RegistryError>;
     /// Attempt to release a claimed domain with the registry's backend.
     /// Returns a result containing [`Ok`] if the domain is released or a [`RegistryError`] if the domain could not be released.
-    fn release(&mut self, name: &DomainName) -> Result<(), RegistryError>;
+    fn release(&mut self, name: DomainName) -> Result<(), RegistryError>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

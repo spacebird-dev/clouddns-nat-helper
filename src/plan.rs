@@ -75,12 +75,12 @@ impl Plan {
             .collect::<HashMap<_, _>>();
         debug!("Currently owned domains: {:?}", owned.keys());
 
-        for aaaa_name in &domains {
-            trace!("Processing domain {}", aaaa_name);
-            if let Some(current) = owned.get(aaaa_name) {
+        for domain_name in &domains {
+            trace!("Processing domain {}", domain_name);
+            if let Some(current) = owned.get(domain_name) {
                 // We own this domains A records
                 if current.a.contains(desired_address) {
-                    info!("No action needed for domain {}", aaaa_name);
+                    info!("No action needed for domain {}", domain_name);
                     continue;
                 } else if !matches!(policy, Policy::CreateOnly) {
                     // Delete old ipv4 records and push our desired address
@@ -89,19 +89,23 @@ impl Plan {
                         current.name
                     );
                     plan.delete_actions.extend(Plan::delete_a_actions(current));
-                    plan.create_actions
-                        .push(Plan::create_a_action(aaaa_name.to_owned(), desired_address));
+                    plan.create_actions.push(Plan::create_a_action(
+                        domain_name.to_owned(),
+                        desired_address,
+                    ));
                 }
             }
             // Domain not owned, see if we can claim it
-            match registry.claim(aaaa_name) {
+            match registry.claim(domain_name.to_owned()) {
                 Ok(_) => {
-                    info!("Claimed new domain {}", aaaa_name);
-                    plan.create_actions
-                        .push(Plan::create_a_action(aaaa_name.to_owned(), desired_address));
+                    info!("Claimed new domain {}", domain_name);
+                    plan.create_actions.push(Plan::create_a_action(
+                        domain_name.to_owned(),
+                        desired_address,
+                    ));
                 }
                 Err(e) => {
-                    debug!("Unable to register domain {}: {}", aaaa_name, e);
+                    debug!("Unable to register domain {}: {}", domain_name, e);
                 }
             }
         }
