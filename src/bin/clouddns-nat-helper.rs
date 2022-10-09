@@ -1,10 +1,7 @@
 mod cli;
 
 use core::panic;
-use std::{
-    mem::discriminant,
-    net::{IpAddr, Ipv6Addr, SocketAddr},
-};
+use std::net::{IpAddr, SocketAddr};
 
 use clap::Parser;
 
@@ -20,7 +17,7 @@ use cloddns_nat_helper::{
     config,
     ipv4source::{self, Ipv4Source, SourceError},
     plan::Plan,
-    provider::{self, Provider, ProviderError, RecordContent},
+    provider::{self, Provider, ProviderError},
     registry::TxtRegistry,
 };
 
@@ -120,14 +117,6 @@ fn run_job(cli: Cli) -> Result<(), ()> {
             return Err(());
         }
     };
-    let v6_records = all_records
-        .iter()
-        .filter(|r| {
-            discriminant(&r.content)
-                == discriminant(&RecordContent::Aaaa(Ipv6Addr::new(1, 1, 1, 1, 1, 1, 1, 1)))
-        })
-        .map(|d| d.domain.clone())
-        .collect_vec();
     let target_addr = match source.addr().map_err(|e| e.to_string()) {
         Ok(a) => a,
         Err(e) => {
@@ -141,7 +130,7 @@ fn run_job(cli: Cli) -> Result<(), ()> {
 
     // Calculate our plan that we will apply. This also registers domain where possible
     info!("Generating plan and registering domains...");
-    let plan = Plan::generate(v6_records, registry.as_mut(), &target_addr, &cli.policy);
+    let plan = Plan::generate(registry.as_mut(), &target_addr, &cli.policy);
     info!("Plan generated");
     info!("Creating the following records: {:?}", plan.create_actions);
     info!("Deleting the following records: {:?}", plan.delete_actions);
@@ -172,11 +161,11 @@ fn run_job(cli: Cli) -> Result<(), ()> {
         info!("Releasing claims on deleted records");
         let mut release_errs = "Unable to release claims on the following domains: ".to_string();
         for r in to_delete {
-            match registry.release(r.domain.to_owned()) {
+            match registry.release(r.domain_name.to_owned()) {
                 Ok(_) => {}
                 Err(e) => {
                     error!("{}", e.to_string());
-                    release_errs += r.domain.as_str();
+                    release_errs += r.domain_name.as_str();
                 }
             }
         }

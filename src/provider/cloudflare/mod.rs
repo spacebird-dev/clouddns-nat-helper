@@ -48,7 +48,7 @@ impl CloudflareProvider {
             self.api
                 .create_record(
                     zone_id,
-                    &rec.domain,
+                    &rec.domain_name,
                     &self.ttl,
                     &self.proxied,
                     rec.content.to_owned().into(),
@@ -137,14 +137,14 @@ impl Provider for CloudflareProvider {
 
     fn create_txt_record(&self, domain: String, content: String) -> Result<(), ProviderError> {
         self.create_record(DnsRecord {
-            domain,
+            domain_name: domain,
             content: super::RecordContent::Txt(content),
         })
     }
 
     fn delete_txt_record(&self, domain: String, content: String) -> Result<(), ProviderError> {
         self.delete_record(DnsRecord {
-            domain,
+            domain_name: domain,
             content: super::RecordContent::Txt(content),
         })
     }

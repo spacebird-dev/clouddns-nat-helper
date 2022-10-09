@@ -24,7 +24,7 @@ impl TryFrom<&endpoints::dns::DnsRecord> for DnsRecord {
             _ => return Err(format!("Invalid record type: {:?}", r.content)),
         };
         Ok(DnsRecord {
-            domain: r.name.to_owned(),
+            domain_name: r.name.to_owned(),
             content: converted_content,
         })
     }

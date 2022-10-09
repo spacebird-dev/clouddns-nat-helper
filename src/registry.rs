@@ -14,8 +14,10 @@ use std::{
 pub trait ARegistry {
     /// Set the registry tenant name
     fn set_tenant(&mut self, tenant: String);
-    /// Returns a list of domains currently owned by this registry
+    /// Returns domains currently owned by this registry
     fn owned_domains(&self) -> Vec<Domain>;
+    //// Returns all domains that the registry knows about, regardless of ownership status
+    fn all_domains(&self) -> Vec<Domain>;
     /// Attempts to claim a domain by name with the registry's backend.
     /// Returns a result containing [`Ok`] if the domain is claimed or a [`RegistryError`] if the domain could not be claimed.
     fn claim(&mut self, name: DomainName) -> Result<(), RegistryError>;
@@ -24,12 +26,25 @@ pub trait ARegistry {
     fn release(&mut self, name: DomainName) -> Result<(), RegistryError>;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// A domain represents a single namespace of DNS records, including all the A/AAAA/TXT records associated with it.
+/// Domains can be owned by either us or someone else, allowing for basic prevention of conflicts.
+/// Note that ownership only applies to the domains A records, nat-helper never claims ownership of any other record types
+#[derive(Debug, Clone, PartialEq)]
 pub struct Domain {
     pub name: DomainName,
     pub a: Vec<Ipv4Addr>,
     pub aaaa: Vec<Ipv6Addr>,
     pub txt: Vec<String>,
+    a_ownership: Ownership,
+}
+#[derive(Debug, Clone, PartialEq)]
+enum Ownership {
+    /// This domains A record belongs to us
+    Owned,
+    /// This domains A records are managed by someone else
+    Taken,
+    /// This domain doesn't have A records, we can claim it
+    Available,
 }
 
 pub type DomainName = String;

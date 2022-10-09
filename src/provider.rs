@@ -66,12 +66,12 @@ impl From<String> for ProviderError {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DnsRecord {
-    pub domain: String,
+    pub domain_name: String,
     pub content: RecordContent,
 }
 impl Display for DnsRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.domain, self.content)
+        write!(f, "{}: {}", self.domain_name, self.content)
     }
 }
 

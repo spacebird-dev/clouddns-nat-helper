@@ -8,7 +8,7 @@ pub fn txt_record_string(tenant: &str) -> String {
     format!("{}_{}{}rec: A", TXT_RECORD_IDENT, tenant, TXT_RECORD_SEP)
 }
 
-pub fn rec_into_d(rec: &DnsRecord, d: &mut Domain) {
+pub fn insert_rec_into_d(rec: &DnsRecord, d: &mut Domain) {
     match &rec.content {
         crate::provider::RecordContent::A(a) => {
             if !d.a.contains(a) {

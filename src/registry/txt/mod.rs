@@ -5,29 +5,13 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use log::{debug, info, warn};
 
-use self::util::{rec_into_d, txt_record_string, TXT_RECORD_IDENT};
-use super::{ARegistry, Domain, DomainName, RegistryError};
+use self::util::{insert_rec_into_d, txt_record_string, TXT_RECORD_IDENT};
+use super::{ARegistry, Domain, DomainName, Ownership, RegistryError};
 use crate::provider::{DnsRecord, Provider};
-
-#[derive(Debug, Clone, PartialEq)]
-enum Ownership {
-    /// This domains A record belongs to us
-    Owned,
-    /// This domains A records are managed by someone else
-    Taken,
-    /// This domain doesn't have A records, we can claim it
-    Available,
-}
-
-#[derive(Debug, Clone)]
-struct RegisteredDomain {
-    domain: Domain,
-    ownership: Ownership,
-}
 
 #[non_exhaustive]
 pub struct TxtRegistry<'a> {
-    domains: HashMap<DomainName, RegisteredDomain>,
+    domains: HashMap<DomainName, Domain>,
     tenant: String,
     provider: &'a dyn Provider,
 }
@@ -75,31 +59,29 @@ impl TxtRegistry<'_> {
         provider: &dyn Provider,
     ) -> Box<dyn ARegistry + '_> {
         let tenant = tenant.replace(TXT_RECORD_IDENT, "");
-        let mut domains: HashMap<String, RegisteredDomain> = HashMap::new();
+        let mut domains: HashMap<String, Domain> = HashMap::new();
 
         // Create a map of all domains that we will watch over
         for rec in &records {
-            if let Some(reg_d) = domains.get_mut(&rec.domain) {
+            if let Some(d) = domains.get_mut(&rec.domain_name) {
                 // Update an existing domain
-                rec_into_d(rec, &mut reg_d.domain)
+                insert_rec_into_d(rec, d);
             } else {
                 // Create a new domain and insert the record
-                let mut reg_d = RegisteredDomain {
-                    domain: Domain {
-                        name: rec.domain.to_owned(),
-                        a: Vec::new(),
-                        aaaa: Vec::new(),
-                        txt: Vec::new(),
-                    },
-                    ownership: Ownership::Taken, // Safe default, overwritten below
+                let mut d = Domain {
+                    name: rec.domain_name.to_owned(),
+                    a: Vec::new(),
+                    aaaa: Vec::new(),
+                    txt: Vec::new(),
+                    a_ownership: Ownership::Taken, // Safe default, overwritten below
                 };
-                rec_into_d(rec, &mut reg_d.domain);
-                domains.insert(rec.domain.to_owned(), reg_d);
+                insert_rec_into_d(rec, &mut d);
+                domains.insert(rec.domain_name.to_owned(), d);
             }
         }
 
         for domain in domains.values_mut() {
-            domain.ownership = TxtRegistry::determine_ownership(&domain.domain, &tenant);
+            domain.a_ownership = TxtRegistry::determine_ownership(domain, &tenant);
         }
 
         Box::new(TxtRegistry {
@@ -114,9 +96,13 @@ impl ARegistry for TxtRegistry<'_> {
     fn owned_domains(&self) -> Vec<super::Domain> {
         self.domains
             .values()
-            .filter(|d| d.ownership == Ownership::Owned)
-            .map(|d| d.domain.clone())
+            .filter(|d| d.a_ownership == Ownership::Owned)
+            .cloned()
             .collect_vec()
+    }
+
+    fn all_domains(&self) -> Vec<Domain> {
+        self.domains.values().cloned().collect_vec()
     }
 
     fn claim(&mut self, name: DomainName) -> Result<(), super::RegistryError> {
@@ -127,7 +113,7 @@ impl ARegistry for TxtRegistry<'_> {
         }
 
         let reg_d = self.domains.get_mut(&name).unwrap();
-        match reg_d.ownership {
+        match reg_d.a_ownership {
             Ownership::Owned => {
                 info!(
                     "Attempted to claim domain {}, but it is already owned by us. Ignoring",
@@ -143,14 +129,11 @@ impl ARegistry for TxtRegistry<'_> {
             }),
             Ownership::Available => {
                 self.provider
-                    .create_txt_record(
-                        reg_d.domain.name.to_owned(),
-                        txt_record_string(&self.tenant),
-                    )
+                    .create_txt_record(reg_d.name.to_owned(), txt_record_string(&self.tenant))
                     .map_err(|e| RegistryError {
                         msg: format!("Unable to claim domain {}: {}", name, e),
                     })?;
-                reg_d.ownership = Ownership::Owned;
+                reg_d.a_ownership = Ownership::Owned;
                 debug!("Successfully claimed domain {}", name);
                 Ok(())
             }
@@ -165,17 +148,14 @@ impl ARegistry for TxtRegistry<'_> {
         }
 
         let reg_d = self.domains.get_mut(&name).unwrap();
-        match reg_d.ownership {
+        match reg_d.a_ownership {
             Ownership::Owned => {
                 self.provider
-                    .delete_txt_record(
-                        reg_d.domain.name.to_owned(),
-                        txt_record_string(&self.tenant),
-                    )
+                    .delete_txt_record(reg_d.name.to_owned(), txt_record_string(&self.tenant))
                     .map_err(|e| RegistryError {
                         msg: format!("unable to release domain {}: {}", name, e),
                     })?;
-                reg_d.ownership = Ownership::Available;
+                reg_d.a_ownership = Ownership::Available;
                 debug!("Sucessfully released domain {}", name);
                 Ok(())
             }
@@ -213,43 +193,43 @@ mod tests {
     fn records() -> Vec<DnsRecord> {
         vec![
             DnsRecord {
-                domain: "owned.example.com".to_string(),
+                domain_name: "owned.example.com".to_string(),
                 content: RecordContent::A(Ipv4Addr::new(10, 1, 1, 1)),
             },
             DnsRecord {
-                domain: "owned.example.com".to_string(),
+                domain_name: "owned.example.com".to_string(),
                 content: RecordContent::Txt(txt_record_string(TENANT)),
             },
             DnsRecord {
-                domain: "available.example.com".to_string(),
+                domain_name: "available.example.com".to_string(),
                 content: RecordContent::Aaaa(Ipv6Addr::new(0xfd42, 1, 1, 1, 1, 1, 1, 1)),
             },
             DnsRecord {
-                domain: "taken.example.com".to_string(),
+                domain_name: "taken.example.com".to_string(),
                 content: RecordContent::A(Ipv4Addr::new(10, 1, 1, 2)),
             },
             DnsRecord {
-                domain: "other-owner.example.com".to_string(),
+                domain_name: "other-owner.example.com".to_string(),
                 content: RecordContent::A(Ipv4Addr::new(10, 1, 1, 3)),
             },
             DnsRecord {
-                domain: "other-owner.example.com".to_string(),
+                domain_name: "other-owner.example.com".to_string(),
                 content: RecordContent::Txt(txt_record_string("other_tenant")),
             },
             DnsRecord {
-                domain: "conflict.example.com".to_string(),
+                domain_name: "conflict.example.com".to_string(),
                 content: RecordContent::Txt(txt_record_string("other_tenant")),
             },
             DnsRecord {
-                domain: "conflict.example.com".to_string(),
+                domain_name: "conflict.example.com".to_string(),
                 content: RecordContent::Txt(txt_record_string(TENANT)),
             },
             DnsRecord {
-                domain: "conflict.example.com".to_string(),
+                domain_name: "conflict.example.com".to_string(),
                 content: RecordContent::Aaaa(Ipv6Addr::new(0xfd42, 1, 1, 1, 1, 1, 1, 2)),
             },
             DnsRecord {
-                domain: "conflict.example.com".to_string(),
+                domain_name: "conflict.example.com".to_string(),
                 content: RecordContent::A(Ipv4Addr::new(10, 1, 1, 2)),
             },
         ]
@@ -260,6 +240,7 @@ mod tests {
             a: vec![Ipv4Addr::new(10, 1, 1, 1)],
             aaaa: vec![],
             txt: vec![txt_record_string(TENANT)],
+            a_ownership: crate::registry::Ownership::Owned,
         }
     }
     fn available_d() -> Domain {
@@ -268,6 +249,7 @@ mod tests {
             aaaa: vec![Ipv6Addr::new(0xfd42, 1, 1, 1, 1, 1, 1, 1)],
             a: vec![],
             txt: vec![],
+            a_ownership: crate::registry::Ownership::Available,
         }
     }
     fn taken_d() -> Domain {
@@ -276,6 +258,7 @@ mod tests {
             a: vec![Ipv4Addr::new(10, 1, 1, 2)],
             aaaa: vec![],
             txt: vec![],
+            a_ownership: crate::registry::Ownership::Taken,
         }
     }
     fn other_owner_d() -> Domain {
@@ -284,6 +267,7 @@ mod tests {
             a: vec![Ipv4Addr::new(10, 1, 1, 3)],
             aaaa: vec![],
             txt: vec![txt_record_string("other_tenant")],
+            a_ownership: crate::registry::Ownership::Taken,
         }
     }
     fn conflict_d() -> Domain {
@@ -292,6 +276,7 @@ mod tests {
             a: vec![Ipv4Addr::new(10, 1, 1, 2)],
             aaaa: vec![Ipv6Addr::new(0xfd42, 1, 1, 1, 1, 1, 1, 2)],
             txt: vec![txt_record_string(TENANT), txt_record_string("other_tenant")],
+            a_ownership: crate::registry::Ownership::Taken,
         }
     }
 
