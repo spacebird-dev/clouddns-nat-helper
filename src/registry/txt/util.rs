@@ -5,7 +5,12 @@ pub const TXT_RECORD_SEP: &str = ";";
 // Returns the TXT ownership record content for a given tenant
 // Global function as we need to call it in new() before we can create our TxtRegistry
 pub fn txt_record_string(tenant: &str) -> String {
-    format!("{}_{}{}rec: A", TXT_RECORD_IDENT, tenant, TXT_RECORD_SEP)
+    format!(
+        "{}_{}{}rec: A",
+        TXT_RECORD_IDENT,
+        tenant.replace(TXT_RECORD_SEP, "_"),
+        TXT_RECORD_SEP
+    )
 }
 
 pub fn insert_rec_into_d(rec: &DnsRecord, d: &mut Domain) {

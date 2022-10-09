@@ -60,7 +60,6 @@ impl TxtRegistry<'_> {
         tenant: String,
         provider: &dyn Provider,
     ) -> Result<Box<dyn ARegistry + '_>, RegistryError> {
-        let tenant = tenant.replace(TXT_RECORD_IDENT, "");
         let mut domains: HashMap<String, Domain> = HashMap::new();
 
         // Create a map of all domains that we will watch over
@@ -190,7 +189,7 @@ mod tests {
 
     use super::{util::txt_record_string, TxtRegistry};
 
-    static TENANT: &str = "test";
+    static TENANT: &str = "evil;test_tennant;name";
 
     fn records() -> Vec<DnsRecord> {
         vec![
