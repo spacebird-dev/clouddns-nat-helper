@@ -5,6 +5,7 @@ use dnsclient::{sync::DNSClient, UpstreamServer};
 use super::{Ipv4Source, SourceError};
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct HostnameSource {
     hostname: String,
     client: DNSClient,

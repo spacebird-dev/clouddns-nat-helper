@@ -7,16 +7,20 @@ use std::{
     net::{Ipv4Addr, Ipv6Addr},
 };
 
-/// ARegistry implements ownership of A records.
-/// Any changes made through a plan are first referenced by the registry
-/// to prevent overwriting records not owned by us.
+/// ARegistry tracks the ownership of A records for domains.
+/// A record changes may only be made to domains that are owned by a registry.
+/// This is enforced by only allowing record changes through plans,
+/// which in turn need to be created with the help from a registry.
 pub trait ARegistry {
+    /// Set the registry tenant name
     fn set_tenant(&mut self, tenant: String);
-    /// Returns a list of domains currently owned by us
+    /// Returns a list of domains currently owned by this registry
     fn owned_domains(&self) -> Vec<Domain>;
-    /// Attempt to claim a domain wit the registrys backend
+    /// Attempts to claim a domain by name with the registry's backend.
+    /// Returns a result containing [`Ok`] if the domain is claimed or a [`RegistryError`] if the domain could not be claimed.
     fn claim(&mut self, name: &DomainName) -> Result<(), RegistryError>;
-    /// Attempt to release a claimed domain
+    /// Attempt to release a claimed domain with the registry's backend.
+    /// Returns a result containing [`Ok`] if the domain is released or a [`RegistryError`] if the domain could not be released.
     fn release(&mut self, name: &DomainName) -> Result<(), RegistryError>;
 }
 

@@ -26,7 +26,6 @@ impl TryFrom<&endpoints::dns::DnsRecord> for DnsRecord {
         Ok(DnsRecord {
             domain: r.name.to_owned(),
             content: converted_content,
-            ttl: Some(r.ttl),
         })
     }
 }

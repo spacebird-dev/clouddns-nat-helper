@@ -25,6 +25,7 @@ struct RegisteredDomain {
     ownership: Ownership,
 }
 
+#[non_exhaustive]
 pub struct TxtRegistry<'a> {
     domains: HashMap<DomainName, RegisteredDomain>,
     tenant: String,
@@ -142,11 +143,10 @@ impl ARegistry for TxtRegistry<'_> {
             }),
             Ownership::Available => {
                 self.provider
-                    .create_record(DnsRecord {
-                        domain: name.clone(),
-                        content: RecordContent::Txt(txt_record_string(&self.tenant)),
-                        ttl: None,
-                    })
+                    .create_txt_record(
+                        reg_d.domain.name.to_owned(),
+                        txt_record_string(&self.tenant),
+                    )
                     .map_err(|e| RegistryError {
                         msg: format!("Unable to claim domain {}: {}", name, e),
                     })?;
@@ -168,11 +168,10 @@ impl ARegistry for TxtRegistry<'_> {
         match reg_d.ownership {
             Ownership::Owned => {
                 self.provider
-                    .delete_record(DnsRecord {
-                        domain: name.clone(),
-                        content: RecordContent::Txt(txt_record_string(&self.tenant)),
-                        ttl: None,
-                    })
+                    .delete_txt_record(
+                        reg_d.domain.name.to_owned(),
+                        txt_record_string(&self.tenant),
+                    )
                     .map_err(|e| RegistryError {
                         msg: format!("unable to release domain {}: {}", name, e),
                     })?;

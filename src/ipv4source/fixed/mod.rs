@@ -3,6 +3,7 @@ use std::net::Ipv4Addr;
 use super::{Ipv4Source, SourceError};
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct FixedSource {
     addr: Ipv4Addr,
 }

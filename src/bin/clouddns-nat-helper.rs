@@ -136,7 +136,7 @@ fn run_job(cli: Cli) -> Result<(), ()> {
         }
     };
 
-    let mut registry = TxtRegistry::create(all_records, cli.txt_tenant, provider.as_ref());
+    let mut registry = TxtRegistry::create(all_records, cli.registry_tenant, provider.as_ref());
     info!("Initialized registry");
 
     // Calculate our plan that we will apply. This also registers domain where possible

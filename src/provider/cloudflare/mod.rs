@@ -8,6 +8,7 @@ use crate::{config::TTL, plan::Plan};
 use super::{DnsRecord, Provider, ProviderError};
 use wrapper::CloudflareWrapper;
 
+#[non_exhaustive]
 pub struct CloudflareProvider {
     api: CloudflareWrapper,
     ttl: Option<TTL>,
@@ -34,39 +35,6 @@ impl CloudflareProvider {
             proxied: config.proxied,
             dry_run: config.dry_run,
         }))
-    }
-}
-
-impl Provider for CloudflareProvider {
-    fn records(&self) -> Result<Vec<DnsRecord>, ProviderError> {
-        debug!("Reading zones from Cloudflare API");
-        let zones = self.api.list_zones()?.result;
-        trace!("Collected zones {:?}", zones);
-
-        let records = zones
-            .iter()
-            .map(|z| self.api.list_records(&z.id, None, None))
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter()
-            .flat_map(|f| f.result)
-            .filter_map(|r| DnsRecord::try_from(&r).ok())
-            .collect::<Vec<DnsRecord>>();
-        trace!("Collected Records: {:?}", records);
-        Ok(records)
-    }
-
-    fn apply_plan(&self, plan: Plan) -> Vec<Result<(), ProviderError>> {
-        let mut results: Vec<Result<(), ProviderError>> = Vec::new();
-
-        for rec in plan.create_actions {
-            results.push(self.create_record(rec));
-        }
-        debug!("All create actions performed");
-        for rec in plan.delete_actions {
-            results.push(self.delete_record(rec));
-        }
-        debug!("All delete actions performed");
-        results
     }
 
     fn create_record(&self, rec: DnsRecord) -> Result<(), ProviderError> {
@@ -117,6 +85,39 @@ impl Provider for CloudflareProvider {
         );
         Ok(())
     }
+}
+
+impl Provider for CloudflareProvider {
+    fn records(&self) -> Result<Vec<DnsRecord>, ProviderError> {
+        debug!("Reading zones from Cloudflare API");
+        let zones = self.api.list_zones()?.result;
+        trace!("Collected zones {:?}", zones);
+
+        let records = zones
+            .iter()
+            .map(|z| self.api.list_records(&z.id, None, None))
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flat_map(|f| f.result)
+            .filter_map(|r| DnsRecord::try_from(&r).ok())
+            .collect::<Vec<DnsRecord>>();
+        trace!("Collected Records: {:?}", records);
+        Ok(records)
+    }
+
+    fn apply_plan(&self, plan: Plan) -> Vec<Result<(), ProviderError>> {
+        let mut results: Vec<Result<(), ProviderError>> = Vec::new();
+
+        for rec in plan.create_actions {
+            results.push(self.create_record(rec));
+        }
+        debug!("All create actions performed");
+        for rec in plan.delete_actions {
+            results.push(self.delete_record(rec));
+        }
+        debug!("All delete actions performed");
+        results
+    }
 
     fn supports_dry_run(&self) -> bool {
         true
@@ -132,5 +133,19 @@ impl Provider for CloudflareProvider {
 
     fn set_ttl(&mut self, ttl: TTL) {
         self.ttl = Some(ttl);
+    }
+
+    fn create_txt_record(&self, domain: String, content: String) -> Result<(), ProviderError> {
+        self.create_record(DnsRecord {
+            domain,
+            content: super::RecordContent::Txt(content),
+        })
+    }
+
+    fn delete_txt_record(&self, domain: String, content: String) -> Result<(), ProviderError> {
+        self.delete_record(DnsRecord {
+            domain,
+            content: super::RecordContent::Txt(content),
+        })
     }
 }

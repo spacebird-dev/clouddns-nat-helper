@@ -122,12 +122,12 @@ pub struct Cli {
     )]
     pub ipv4_hostname_dns_servers: Vec<Ipv4Addr>,
 
-    /// Unique identifier (tenant) to use in registry txt records
+    /// Unique identifier (tenant) to use for the registry to identify this instance of nat-helper
     #[arg(
         long,
         default_value = "default",
         value_name = "TENANT",
-        env = concat!(env_prefix!(), "TXT_TENANT")
+        env = concat!(env_prefix!(), "REGISTRY_TENANT")
     )]
-    pub txt_tenant: String,
+    pub registry_tenant: String,
 }
