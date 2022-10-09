@@ -5,7 +5,7 @@ use log::{info, trace};
 use crate::{
     config::Policy,
     provider::DnsRecord,
-    registry::{ARegistry, Domain, DomainName},
+    registry::{ARegistry, Domain},
 };
 
 /// A Plan is a list of actions (create or delete) that will be applied to a provider and their DNS records.
@@ -22,7 +22,7 @@ pub struct Plan {
 
 impl Plan {
     // Generate a dns record for a given name and address
-    fn create_a_action(name: DomainName, addr: &Ipv4Addr) -> DnsRecord {
+    fn create_a_action(name: String, addr: &Ipv4Addr) -> DnsRecord {
         let c = DnsRecord {
             domain_name: name,
             content: crate::provider::RecordContent::A(*addr),
@@ -94,7 +94,7 @@ impl Plan {
                 }
             } else if !domain.aaaa.is_empty() && domain.a.is_empty() {
                 // Domain not owned and matches our criteria (at least one AAAA record and no A records), see if we can claim it
-                match registry.claim(domain.name.to_owned()) {
+                match registry.claim(domain.name.as_str()) {
                     Ok(_) => {
                         info!("Claimed new domain {}", domain.name);
                         plan.create_actions.push(Plan::create_a_action(

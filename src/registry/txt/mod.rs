@@ -11,7 +11,7 @@ use crate::provider::Provider;
 
 #[non_exhaustive]
 pub struct TxtRegistry<'a> {
-    domains: HashMap<DomainName, Domain>,
+    domains: HashMap<String, Domain>,
     tenant: String,
     provider: &'a dyn Provider,
 }
@@ -107,13 +107,13 @@ impl ARegistry for TxtRegistry<'_> {
     }
 
     fn claim(&mut self, name: DomainName) -> Result<(), super::RegistryError> {
-        if !self.domains.contains_key(&name) {
+        if !self.domains.contains_key(name) {
             return Err(RegistryError {
                 msg: format!("Domain {} not in registry", name),
             });
         }
 
-        let reg_d = self.domains.get_mut(&name).unwrap();
+        let reg_d = self.domains.get_mut(name).unwrap();
         match reg_d.a_ownership {
             Ownership::Owned => {
                 info!(
@@ -142,13 +142,13 @@ impl ARegistry for TxtRegistry<'_> {
     }
 
     fn release(&mut self, name: DomainName) -> Result<(), RegistryError> {
-        if !self.domains.contains_key(&name) {
+        if !self.domains.contains_key(name) {
             return Err(RegistryError {
                 msg: format!("Domain {} not in registry", name),
             });
         }
 
-        let reg_d = self.domains.get_mut(&name).unwrap();
+        let reg_d = self.domains.get_mut(name).unwrap();
         match reg_d.a_ownership {
             Ownership::Owned => {
                 self.provider
@@ -303,7 +303,7 @@ mod tests {
         let mut rg =
             TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
-        rg.claim(available_d().name).unwrap();
+        rg.claim(available_d().name.as_str()).unwrap();
 
         assert!(rg.owned_domains().len() == 2);
         assert!(rg.owned_domains().contains(&owned_d()));
@@ -323,7 +323,7 @@ mod tests {
             TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         let before = rg.owned_domains();
-        rg.claim(owned_d().name).unwrap();
+        rg.claim(owned_d().name.as_str()).unwrap();
         let after = rg.owned_domains();
 
         assert_eq!(before, after);
@@ -340,7 +340,7 @@ mod tests {
         let mut rg =
             TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
-        rg.claim(taken_d().name).unwrap_err();
+        rg.claim(taken_d().name.as_str()).unwrap_err();
 
         assert!(rg.owned_domains().len() == 1);
         assert!(rg.owned_domains().contains(&owned_d()));
@@ -355,7 +355,7 @@ mod tests {
         let mut rg =
             TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
-        rg.claim(other_owner_d().name).unwrap_err();
+        rg.claim(other_owner_d().name.as_str()).unwrap_err();
 
         assert!(rg.owned_domains().len() == 1);
         assert!(rg.owned_domains().contains(&owned_d()));
@@ -371,7 +371,7 @@ mod tests {
         let mut rg =
             TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
-        rg.release(owned_d().name).unwrap();
+        rg.release(owned_d().name.as_str()).unwrap();
         assert!(rg.owned_domains().is_empty());
     }
 
@@ -384,7 +384,7 @@ mod tests {
         let mut rg =
             TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
-        rg.release(available_d().name).unwrap();
+        rg.release(available_d().name.as_str()).unwrap();
 
         assert!(rg.owned_domains().len() == 1);
         assert!(rg.owned_domains().get(0).unwrap() == &owned_d());
@@ -399,8 +399,8 @@ mod tests {
         let mut rg =
             TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
-        rg.release(other_owner_d().name).unwrap_err();
-        rg.release(taken_d().name).unwrap_err();
+        rg.release(other_owner_d().name.as_str()).unwrap_err();
+        rg.release(taken_d().name.as_str()).unwrap_err();
 
         assert!(rg.owned_domains().len() == 1);
         assert!(rg.owned_domains().get(0).unwrap() == &owned_d());
@@ -415,7 +415,7 @@ mod tests {
         let mut rg =
             TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
-        rg.claim("unknown.example.com".to_string()).unwrap_err();
+        rg.claim("unknown.example.com").unwrap_err();
     }
 
     #[test]
@@ -427,7 +427,7 @@ mod tests {
         let mut rg =
             TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
-        rg.release("unknown.example.com".to_string()).unwrap_err();
+        rg.release("unknown.example.com").unwrap_err();
     }
 
     #[test]
@@ -441,8 +441,8 @@ mod tests {
 
         assert!(!rg.owned_domains().contains(&conflict_d()));
 
-        rg.claim(conflict_d().name).unwrap_err();
-        rg.release(conflict_d().name).unwrap_err();
+        rg.claim(conflict_d().name.as_str()).unwrap_err();
+        rg.release(conflict_d().name.as_str()).unwrap_err();
 
         assert!(rg.owned_domains().len() == 1);
         assert!(rg.owned_domains().get(0).unwrap() == &owned_d());

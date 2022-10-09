@@ -164,7 +164,7 @@ fn run_job(cli: Cli) -> Result<(), ()> {
         info!("Releasing claims on deleted records");
         let mut release_errs = "Unable to release claims on the following domains: ".to_string();
         for r in to_delete {
-            match registry.release(r.domain_name.to_owned()) {
+            match registry.release(r.domain_name.as_str()) {
                 Ok(_) => {}
                 Err(e) => {
                     error!("{}", e.to_string());

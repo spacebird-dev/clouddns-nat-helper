@@ -31,7 +31,7 @@ pub trait ARegistry {
 /// Note that ownership only applies to the domains A records, nat-helper never claims ownership of any other record types
 #[derive(Debug, Clone, PartialEq)]
 pub struct Domain {
-    pub name: DomainName,
+    pub name: String,
     pub a: Vec<Ipv4Addr>,
     pub aaaa: Vec<Ipv6Addr>,
     pub txt: Vec<String>,
@@ -47,7 +47,7 @@ enum Ownership {
     Available,
 }
 
-pub type DomainName = String;
+pub type DomainName<'a> = &'a str;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RegistryError {
