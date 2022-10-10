@@ -18,6 +18,10 @@ jobs:
     steps:
       - name: Check out codebase
         uses: actions/checkout@v3
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          override: true
       - name: Run pre-commit checks
         uses: pre-commit/action@v3.0.0
 
@@ -79,6 +83,10 @@ jobs:
     steps:
       - name: Check out codebase
         uses: actions/checkout@v3
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          override: true
 
       - name: Publish crate
         run: cargo publish
