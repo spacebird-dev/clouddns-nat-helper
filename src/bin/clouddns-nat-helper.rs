@@ -9,7 +9,7 @@ use env_logger::Builder;
 use itertools::Itertools;
 use log::{error, info, trace};
 use tokio::{
-    task,
+    task::{self},
     time::{sleep, Duration},
 };
 
@@ -23,8 +23,8 @@ use clouddns_nat_helper::{
 
 use cli::Cli;
 
-#[tokio::main]
-async fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<(), String> {
     let cli = Cli::parse();
 
     Builder::new().filter_level(cli.loglevel.into()).init();
@@ -39,13 +39,15 @@ async fn main() {
                 if r.is_err() {
                     error!("Last task completed with errors")
                 }
+                if cli.run_once {
+                    return r.map_err(|_| "".to_string());
+                }
             }
             Err(_) => {
                 error!("Task panicked, aborting...");
                 panic!();
             }
         }
-
         sleep(Duration::from_secs(cli.interval)).await;
     }
 }

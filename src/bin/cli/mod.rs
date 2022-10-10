@@ -42,6 +42,10 @@ pub struct Cli {
     )]
     pub loglevel: Loglevel,
 
+    /// Only run the utility once, then exit
+    #[arg(long, default_value_t = false, action)]
+    pub run_once: bool,
+
     /// Time to wait between update operations in seconds
     #[arg(
         short = 'i',
