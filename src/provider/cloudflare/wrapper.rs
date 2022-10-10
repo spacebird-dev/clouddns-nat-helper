@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(dead_code))]
+
 use cloudflare::{
     endpoints::{self},
     framework::{
