@@ -17,6 +17,7 @@ pub struct Cli {
     #[arg(
         value_enum,
         short = 's',
+        long,
         required = true,
         env = concat!(env_prefix!(), "SOURCE")
     )]
@@ -26,6 +27,7 @@ pub struct Cli {
     #[arg(
         value_enum,
         short = 'p',
+        long,
         required = true,
         default_value_t = Provider::Cloudflare,
         env = concat!(env_prefix!(), "PROVIDER")
@@ -36,6 +38,7 @@ pub struct Cli {
     #[arg(
         value_enum,
         short = 'l',
+        long,
         default_value_t = Loglevel::Info,
         value_name = "LEVEL",
         env = concat!(env_prefix!(), "LOGLEVEL")
@@ -49,6 +52,7 @@ pub struct Cli {
     /// Time to wait between update operations in seconds
     #[arg(
         short = 'i',
+        long,
         default_value_t = 60,
         env = concat!(env_prefix!(), "INTERVAL")
     )]

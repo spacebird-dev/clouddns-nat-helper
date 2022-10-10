@@ -1,6 +1,6 @@
 //! Main crate for the `clouddns_nat_helper` application.
 //!
-//! For usage information, see: (here)[https://github.com/maxhoesel/clouddns-nat-helper]
+//! For usage information, see: [here](https://github.com/maxhoesel/clouddns-nat-helper)
 //!
 //! For more information, click on one of the modules below.
 //! The following modules might be of interest if you want to add new functionality:

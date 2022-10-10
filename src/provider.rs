@@ -1,7 +1,7 @@
 //! Interface with DNS providers and get/set zone records.
 //!
 //! Providers are DNS server providers such as Cloudflare that can be accessed through an API.
-//! This application retrieves records from them, generates a [`plan::Plan`] of required actions,
+//! This application retrieves records from them, generates a [`crate::plan::Plan`] of required actions,
 //! then applies that plan back to the providers.
 //!
 //! All providers implement the [`Provider`] trait. Currently, the following providers are available:
