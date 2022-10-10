@@ -1,3 +1,5 @@
+//! Manage A record ownership using domain TXT records.
+
 mod util;
 
 use std::collections::HashMap;
@@ -9,6 +11,18 @@ use self::util::{insert_rec_into_d, txt_record_string, TXT_RECORD_IDENT};
 use super::{ARegistry, Domain, DomainName, Ownership, RegistryError};
 use crate::provider::Provider;
 
+/// The TxtRegistry manages ownership for each domains A record via an associated TXT record
+/// containing a reference to this application.
+///
+/// This registry is a little special as it stores its ownership through the provider and not in some external
+/// database/service. As such, it is coupled to a [`Provider`] instance and uses it to manage its ownership records.
+/// This is transparent to any caller.
+///
+/// Changes to records are only allowed if this TXT record is present.
+///
+/// Domains may be claimed if there is no current A record and no ownership TXT record currently exists.
+///
+/// Use the [`TxtRegistry::from_provider()`] function to create a new registry using a provider.
 #[non_exhaustive]
 pub struct TxtRegistry<'a> {
     domains: HashMap<String, Domain>,

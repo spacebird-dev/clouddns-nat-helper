@@ -2,7 +2,7 @@ use std::net::Ipv4Addr;
 
 use clap::Parser;
 
-use cloddns_nat_helper::config::{Ipv4AddressSource, Loglevel, Policy, Provider, TTL};
+use clouddns_nat_helper::config::{Ipv4AddressSource, Loglevel, Policy, Provider, TTL};
 
 macro_rules! env_prefix {
     () => {
@@ -50,7 +50,7 @@ pub struct Cli {
     )]
     pub interval: u64,
 
-    /// What actions should be allowed
+    /// What A record actions are permitted. createonly: create,upsert: create,update, sync: create,update,delete.
     #[arg(
         value_enum,
         long,

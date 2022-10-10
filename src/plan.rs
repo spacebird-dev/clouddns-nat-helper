@@ -1,3 +1,5 @@
+//! Plan the actions required to bring domains up-to-date.
+
 use std::{collections::HashMap, net::Ipv4Addr};
 
 use log::{info, trace};

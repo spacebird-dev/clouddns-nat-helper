@@ -13,7 +13,7 @@ use tokio::{
     time::{sleep, Duration},
 };
 
-use cloddns_nat_helper::{
+use clouddns_nat_helper::{
     config,
     ipv4source::{self, Ipv4Source, SourceError},
     plan::Plan,
@@ -52,7 +52,7 @@ async fn main() {
 
 fn get_source(cli: &Cli) -> Result<Box<dyn Ipv4Source>, SourceError> {
     match cli.source {
-        cloddns_nat_helper::config::Ipv4AddressSource::Hostname => {
+        clouddns_nat_helper::config::Ipv4AddressSource::Hostname => {
             ipv4source::HostnameSource::from_config(&ipv4source::HostnameSourceConfig {
                 hostname: cli.ipv4_hostname.to_owned().unwrap(),
                 servers: cli
@@ -62,7 +62,7 @@ fn get_source(cli: &Cli) -> Result<Box<dyn Ipv4Source>, SourceError> {
                     .collect_vec(),
             })
         }
-        cloddns_nat_helper::config::Ipv4AddressSource::Fixed => Ok(
+        clouddns_nat_helper::config::Ipv4AddressSource::Fixed => Ok(
             ipv4source::FixedSource::from_addr(cli.ipv4_fixed_address.unwrap()),
         ),
     }

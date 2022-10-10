@@ -1,3 +1,11 @@
+//! Manage ownership of DNS records
+//!
+//! Registries are responsible for ensuring that no changes are made to DNS records that we did no create ourselves.
+//! Note that this application will only ever modify A records (and TXT records if using the [`TxtRegistry`]), never AAAA records.
+//!
+//! All registries implement the [`ARegistry`] trait. Currently, the following registries are available:
+//! - [`TxtRegistry`]: Manages ownership via TXT records in the same zone as the A records
+
 mod txt;
 
 pub use txt::TxtRegistry;
@@ -10,10 +18,11 @@ use std::{
 #[cfg(test)]
 use mockall::automock;
 
-/// ARegistry tracks the ownership of A records for domains.
+/// Tracks the ownership of A records for [`Domain`]s.
 /// A record changes may only be made to domains that are owned by a registry.
-/// This is enforced by only allowing record changes through plans,
-/// which in turn need to be created with the help from a registry.
+///
+/// This is enforced by only allowing record changes in [`crate::provider::Provider`] through [`crate::plan::Plan`]s,
+/// which in turn uses a registry to change domain ownership.
 #[cfg_attr(test, automock)]
 #[cfg_attr(not(test), allow(clippy::needless_lifetimes))] // needed for mockall
 pub trait ARegistry {
@@ -31,9 +40,7 @@ pub trait ARegistry {
     fn release<'a>(&mut self, name: DomainName<'a>) -> Result<(), RegistryError>;
 }
 
-/// A domain represents a single namespace of DNS records, including all the A/AAAA/TXT records associated with it.
-/// Domains can be owned by either us or someone else, allowing for basic prevention of conflicts.
-/// Note that ownership only applies to the domains A records, nat-helper never claims ownership of any other record types
+/// Represents a single FQDN and its associated DNS records, as returned by a [`ARegistry`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Domain {
     pub name: String,
@@ -46,7 +53,10 @@ pub struct Domain {
     #[cfg(not(test))]
     a_ownership: Ownership,
 }
+
+/// Represents the current ownership status of a domain.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[doc(hidden)]
 pub enum Ownership {
     /// This domains A record belongs to us
     Owned,

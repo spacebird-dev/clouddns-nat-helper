@@ -1,5 +1,5 @@
 [package]
-name = "cloddns-nat-helper"
+name = "clouddns-nat-helper"
 version = "0.1.0"
 edition = "2021"
 description = "Autogenerate A records for NAT setups from AAA records in cloud providers"

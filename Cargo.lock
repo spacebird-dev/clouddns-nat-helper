@@ -340,7 +340,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cloddns-nat-helper"
+name = "clouddns-nat-helper"
 version = "0.1.0"
 dependencies = [
  "chrono",
