@@ -264,7 +264,7 @@ mod tests {
     }
     fn other_owner_d() -> Domain {
         Domain {
-            name: "taken.example.com".to_string(),
+            name: "other-owner.example.com".to_string(),
             a: vec![Ipv4Addr::new(10, 1, 1, 3)],
             aaaa: vec![],
             txt: vec![txt_record_string("other_tenant")],

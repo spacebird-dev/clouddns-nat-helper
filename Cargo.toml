@@ -6,6 +6,12 @@ description = "Autogenerate A records for NAT setups from AAA records in cloud p
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dev-dependencies]
+mockall = "0.11.2"
+serde_json = "1.0.85"
+chrono = "0.4.22"
+totems = "0.2.7"
+
 [dependencies]
 clap = { version = "4.0.10", features = ["derive", "env"] }
 cloudflare = "0.9.1"
@@ -15,9 +21,7 @@ env_logger = "0.9.1"
 http = "0.2.8"
 itertools = "0.10.5"
 log = "0.4.17"
-mockall = "0.11.2"
-serde = "1.0.145"
-serde_json = "1.0.85"
+mockall_double = "0.3.0"
 tokio = { version = "1.21.2", features = ["time", "macros"] }
 
 [patch.crates-io]

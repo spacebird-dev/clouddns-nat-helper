@@ -1,5 +1,6 @@
 mod cloudflare;
 
+#[cfg(test)]
 use mockall::automock;
 
 // Re-exports for convenience
@@ -15,7 +16,7 @@ use crate::{config::TTL, plan::Plan};
 
 /// A provider is any DNS service provider, such as Cloudflare, PowerDNS, etc...
 /// They implement a few basic methods to access and modify DNS record
-#[automock]
+#[cfg_attr(test, automock)]
 pub trait Provider {
     /// Returns whether this provider supports running in dry-run mode, with no changes being made
     fn supports_dry_run(&self) -> bool;

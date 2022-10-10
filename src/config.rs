@@ -1,4 +1,6 @@
 #![allow(non_camel_case_types)]
+use std::fmt::{write, Display};
+
 use clap::ValueEnum;
 use log::LevelFilter;
 
