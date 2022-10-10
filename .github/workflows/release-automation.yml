@@ -11,7 +11,7 @@ jobs:
     name: Update Release Draft
     runs-on: ubuntu-latest
     outputs:
-      version-tag: ${{ steps.drafter.outputs.tag_name }}
+      version-tag: ${{ steps.drafter.outputs.name }}
     steps:
       - uses: release-drafter/release-drafter@v5
         id: drafter
