@@ -31,6 +31,9 @@ jobs:
 
       - name: Setup rust
         uses: actions-rs/toolchain@v1
+        with:
+          override: true
+          toolchain: stable
 
       - name: Install set-cargo-version crate
         uses: actions-rs/cargo@v1
