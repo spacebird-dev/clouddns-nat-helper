@@ -48,9 +48,7 @@ jobs:
           command: test
 
       - name: Build coverage
-        uses: actions-rs/cargo@v1
-        with:
-          command: make coverage-llvm-cov
+        run: caro make coverage-llvm-cov
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v2
