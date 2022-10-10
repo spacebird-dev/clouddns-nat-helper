@@ -22,6 +22,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           override: true
+          toolchain: stable
       - name: Run pre-commit checks
         uses: pre-commit/action@v3.0.0
 
@@ -37,6 +38,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           override: true
+          toolchain: stable
       - name: Install cargo-make binary
         uses: davidB/rust-cargo-make@v1
 
@@ -67,6 +69,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           override: true
+          toolchain: stable
 
       - name: Generate docs
         run: cargo doc --no-deps
@@ -87,6 +90,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           override: true
+          toolchain: stable
 
       - name: Publish crate
         run: cargo publish
@@ -113,6 +117,7 @@ jobs:
         with:
           target: "${{ matrix.target }}"
           override: true
+          toolchain: stable
 
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
