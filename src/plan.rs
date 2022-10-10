@@ -1,6 +1,6 @@
 use std::{collections::HashMap, net::Ipv4Addr};
 
-use log::{info, trace, warn};
+use log::{info, trace};
 
 use crate::{
     config::Policy,
