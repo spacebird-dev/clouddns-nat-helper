@@ -23,6 +23,12 @@ jobs:
         with:
           override: true
           toolchain: stable
+      - name: Install cargo-make binary
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Setup dev env
+        run: cargo make dev-env
+
       - name: Run pre-commit checks
         uses: pre-commit/action@v3.0.0
 
