@@ -1,6 +1,7 @@
 ![Release](https://img.shields.io/github/v/release/maxhoesel/clouddns-nat-helper)
 ![CI Status](https://img.shields.io/github/workflow/status/maxhoesel/clouddns-nat-helper/CI/main)
 ![License](https://img.shields.io/github/license/maxhoesel/clouddns-nat-helper)
+![Coverage](https://img.shields.io/codecov/c/github/maxhoesel/clouddns-nat-helper)
 
 # clouddns-nat-helper
 
