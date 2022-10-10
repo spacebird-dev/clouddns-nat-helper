@@ -1,3 +1,7 @@
+![Release](https://img.shields.io/github/v/release/maxhoesel/clouddns-nat-helper)
+![CI Status](https://img.shields.io/github/workflow/status/maxhoesel/clouddns-nat-helper/CI/main)
+![License](https://img.shields.io/github/license/maxhoesel/clouddns-nat-helper)
+
 # clouddns-nat-helper
 
 A utility to automatically generate A records for hosts behind a NAT from AAAA records in a DNS zone.
@@ -16,7 +20,7 @@ Most ISPs hand out a single dynamic public IPv4 address, as well as a public IPv
 
 Routing the Ipv6 traffic is "easy" enough:
 
-1. Create a Ipv6 subnet in your prefix that will contain your public k8s services
+1. Create an Ipv6 subnet in your prefix that will contain your public k8s services
 2. Use [MetalLB](https://metallb.universe.tf/) or similar to assign services addresses from that subnet
 3. Use [external-dns](https://github.com/kubernetes-sigs/external-dns) to generate DNS records at an external DNS provider like Cloudflare to route traffic to your network
     - Note: At the time of writing (October 2022), external-dns doesn't actually support Ipv6 properly! Yes, really. Thankfully there are forks that work for me (see [here](https://github.com/samipsolutions/external-dns/tree/feat/ipv6-support) and [here](https://github.com/kubernetes-sigs/external-dns/pull/2461))
@@ -40,7 +44,7 @@ Another approach (which is what this tool does) is to configure external-dns to 
 
 [^1]: Note that this requires running two versions of external-dns, one for IPv4 with the hardcoded value, and one for IPv6. It might get messy
 
-## How it works
+# How it works
 
 This tool operates in 3 basic steps:
 1. It reads records from a DNS provider such as Cloudflare
@@ -51,37 +55,37 @@ nat-helper also keeps track of domain ownership using TXT records (or potentiall
 meaning that it *knows* which domains A records were created by it, and which ones weren't.
 This also allows us to track changes, update records when they become outdated and delete A records for a owned domain when there are no more AAAA records.
 
-## Status
+# Status
 
 If you couldn't tell from the above description, this is a hobby project for a rather specific use case.
-That said, I build it with reliability, safety and extensibility in mind and it has served its purpose well.
+That said, I built it with reliability, safety and extensibility in mind and it has served its purpose well.
 Still, use it at your own risk. I may break things in future releases if needed.
 
 Providers, Registries and Ipv4Sources use pluggable interfaces, so adding new ones in the future should be simple.
 
-## Installation
+# Installation
 
-### Binary
+## Binary
 
 You can download a binary from the [releases page](https://github.com/maxhoesel/clouddns-nat-helper/releases)
 
-### With Cargo
+## With Cargo
 
 If you have `cargo` installed, simply run
 
 `cargo install clouddns_nat_helper`
 
-### As a k8s application
+## As a k8s application
 
 TODO, there will be a helm chart
 
-## Usage
+# Usage
 
 (Almost) all flags can be passed via a command-line or as an environment variable.
 
 See `clouddns_nat_helper --help` for a list of all flags
 
-### Quick-Start
+## Quick-Start
 
 `clouddns_nat_helper -s hostname -p cloudflare --ipv4-hostname <yourdomain.invalid> --cloudflare-api-token <your_cf_api_token>`
 
@@ -97,7 +101,7 @@ Some other useful options:
 - `--run-once`: Set this if you just want to run the tool once
 - `--interval/-i`: Set a different interval between runs from the default of 60 seconds
 
-### Limiting performed actions and controlling ownership
+## Limiting performed actions and controlling ownership
 
 As mentioned above, this tool will NOT touch any records that it did not create/does not own.
 On its own, this should prevent any conflicts with manually entered IPv4 addresses or other DNS automation.
@@ -120,20 +124,20 @@ The `--policy` flag can be used to limit the actions that this tool may perform 
 - `upsert`: Create records and update existing ones, but don't delete A records if their corresponding AAAA records get removed
 - `sync` (default): Perform create, update and delete actions as needed
 
-## Development
+# Development
 
-### Getting started
+## Getting started
 
 The steps below assume that you have a rust toolchain and `cargo` installed on your system.
 
 To use the pre-commit hooks, `pre-commit` needs to be installed and in $PATH
 
 1. Clone this repository
-2. Install cargo-make `cargo install cargo-make`
+2. Install cargo-make: `cargo install cargo-make`
 3. To setup a development environment: `cargo make dev-env`
 4. Happy hacking!
 
-### Builds, Tests, Docs
+## Builds, Tests, Docs
 
 Use the standard `cargo` commands for builds, tests, etc.
 
