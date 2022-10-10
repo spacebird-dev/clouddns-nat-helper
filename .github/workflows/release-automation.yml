@@ -27,7 +27,7 @@ jobs:
       - update-release-draft
     steps:
       - name: Check out codebase
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.1.0
 
       - name: Setup rust
         uses: actions-rs/toolchain@v1
