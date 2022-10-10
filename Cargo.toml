@@ -3,8 +3,10 @@ name = "clouddns-nat-helper"
 version = "0.1.0"
 edition = "2021"
 description = "Autogenerate A records for NAT setups from AAA records in cloud providers"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license-file = "LICENSE"
+repository = "https://github.com/maxhoesel/clouddns-nat-helper"
+keywords = ["dns", "cloud", "cloudflare", "nat", "ipv4"]
+categories = ["command-line-utilities"]
 
 [dev-dependencies]
 mockall = "0.11.2"

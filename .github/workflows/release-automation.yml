@@ -1,0 +1,56 @@
+name: Release Automation
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  update-release-draft:
+    name: Update Release Draft
+    runs-on: ubuntu-latest
+    outputs:
+      version-tag: ${{ steps.drafter.outputs.tag_name }}
+    steps:
+      - uses: release-drafter/release-drafter@v5
+        id: drafter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+  bump-crate-version:
+    name: Update crate version
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - update-release-draft
+    steps:
+      - name: Check out codebase
+        uses: actions/checkout@v3
+
+      - name: Setup rust
+        uses: actions-rs/toolchain@v1
+
+      - name: Install set-cargo-version crate
+        uses: actions-rs/cargo@v1
+        with:
+          command: install set-cargo-version
+
+      - name: Update cargo version
+        run: set-cargo-version ./Cargo.toml "${{ needs.update-release-draft.outputs.version-tag }}"
+
+      - name: Open PR for collection version update
+        uses: peter-evans/create-pull-request@v4
+        with:
+          add-paths: |
+            Cargo.toml
+          title: Update version to ${{ needs.update-release-draft.outputs.version-tag }}
+          body: |
+            Bumps the crate version to keep up with recently merged changes.
+
+            This PR was created automatically by the release-automation workflow.
+          commit-message: "Update version to ${{ needs.update-release-draft.outputs.version-tag }}"
+          branch: maintenance/version-bump
+          labels: pr-nochangelog
+          delete-branch: true

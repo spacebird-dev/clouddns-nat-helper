@@ -67,13 +67,15 @@ Providers, Registries and Ipv4Sources use pluggable interfaces, so adding new on
 
 ## Binary
 
-You can download a binary from the [releases page](https://github.com/maxhoesel/clouddns-nat-helper/releases)
+You can download linux binaries from the [releases page](https://github.com/maxhoesel/clouddns-nat-helper/releases).
+
+Note that only the `x86_64-unknown-linux-gnu` target is tested thoroughly, the other binaries should work as well however.
 
 ## With Cargo
 
 If you have `cargo` installed, simply run
 
-`cargo install clouddns_nat_helper`
+`cargo install clouddns-nat-helper`
 
 ## As a k8s application
 
@@ -83,11 +85,11 @@ TODO, there will be a helm chart
 
 (Almost) all flags can be passed via a command-line or as an environment variable.
 
-See `clouddns_nat_helper --help` for a list of all flags
+See `clouddns-nat-helper --help` for a list of all flags
 
 ## Quick-Start
 
-`clouddns_nat_helper -s hostname -p cloudflare --ipv4-hostname <yourdomain.invalid> --cloudflare-api-token <your_cf_api_token>`
+`clouddns-nat-helper -s hostname -p cloudflare --ipv4-hostname <yourdomain.invalid> --cloudflare-api-token <your_cf_api_token>`
 
 - `-s` specifies the IPv4 source to use. Here, hostname is used to resolve a hostname to an IP address
     - `--ipv4-hostname` specifies the hostname that you want to resolve to its IP address
