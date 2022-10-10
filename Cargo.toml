@@ -19,7 +19,7 @@ chrono = "0.4.22"
 totems = "0.2.7"
 
 [dependencies]
-clap = { version = "4.0.10", features = ["derive", "env"] }
+clap = { version = "4.0.12", features = ["derive", "env"] }
 cloudflare = "0.9.1"
 dnsclient = "0.1.17"
 domain = { version = "0.7.0" }
