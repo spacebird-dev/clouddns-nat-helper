@@ -36,9 +36,7 @@ jobs:
           toolchain: stable
 
       - name: Install set-cargo-version crate
-        uses: actions-rs/cargo@v1
-        with:
-          command: install set-cargo-version
+        run: cargo install set-cargo-version
 
       - name: Update cargo version
         run: set-cargo-version ./Cargo.toml "${{ needs.update-release-draft.outputs.version-tag }}"
