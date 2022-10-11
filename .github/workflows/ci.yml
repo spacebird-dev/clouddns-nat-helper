@@ -86,8 +86,6 @@ jobs:
         run: |
           cross build --target ${{ matrix.target.name }}
           cross build --target ${{ matrix.target.name }} --all-features
-        env:
-          RUSTFLAGS: "-Dwarnings"
 
       - name: Test binary
         run: |
@@ -129,5 +127,3 @@ jobs:
 
       - name: Generate docs
         run: cargo doc --no-deps
-        env:
-          RUSTDOCFLAGS: "-Dwarnings"
