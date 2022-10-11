@@ -1,5 +1,5 @@
 ---
-name: CI
+name: Release
 on:
   push:
     branches:
@@ -94,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: ${{ github.event.repository.name }}_${{ matrix.target.name }}
-          path: target/${{ matrix.target.name }}/release/${{ matrix.target.name }}${{ matrix.target.extension }}
+          path: target/${{ matrix.target.name }}/release/${{ github.event.repository.name }}${{ matrix.target.extension }}
 
   gh-release-artifacts:
     name: Upload ${{ matrix.target }} to GH Release
