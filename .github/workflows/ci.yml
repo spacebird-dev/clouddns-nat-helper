@@ -100,7 +100,7 @@ jobs:
       - ci
       - docs
     strategy:
-      fail-fast: no
+      fail-fast: false
       matrix:
         target:
           - aarch64-unknown-linux-gnu
@@ -108,6 +108,9 @@ jobs:
           - x86_64-apple-darwin
           - x86_64-pc-windows-msvc
     steps:
+      - name: Check out codebase
+        uses: actions/checkout@v3
+
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
         with:
