@@ -152,7 +152,7 @@ jobs:
         arch:
           - name: amd64
             artifact: x86_64-unknown-linux-gnu
-          - name: arm64
+          - name: arm64v8
             artifact: aarch64-unknown-linux-gnu
     steps:
       - name: Check out codebase
