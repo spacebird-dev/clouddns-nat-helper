@@ -179,33 +179,16 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_TOKEN}}
 
-      # Versioned docker tags with arch specifier.
-      # Example: (v1.2.3) => 1-amd64, 1.2-amd64, 1.2.3-amd64
-      - name: Generate docker tags [version-arch]
-        if: startsWith(github.ref, 'refs/tags/v')
-        id: tags_version_arch
-        uses: docker/metadata-action@v4
-        with:
-          flavor: |
-            suffix=${{ matrix.arch.name }}
-            latest=false
-          images: |
-            ${{ github.repository }}
-            ghcr.io/${{ github.repository }}
-            quay.io/${{ github.repository }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha
-
-      # Versioned docker tags without arch (i.e. default == amd64).
-      # Example: (v1.2.3) => 1, 1.2, 1.2.3
+      # Docker tag schema:
+      # either: latest[-arch]
+      # or: version[-arch]
+      #
+      # version is either the major release ('1'), major + minor ('1.2') or full version ('1.2.3-pre.4')
+      # arch is one of matrix.arch.name, but we also generate a set of tags without arch (default, this is amd64)
+      #
+      # Note that no tag '0[-arch]' will be generated, as 0.x versions are unstable and should not be relied upon
       - name: Generate docker tags [version] (for amd64)
-        if: |
-          startsWith(github.ref, 'refs/tags/v')
-          && matrix.arch.name == 'amd64'
-        id: tags_version
+        id: tags
         uses: docker/metadata-action@v4
         with:
           flavor: |
@@ -215,30 +198,15 @@ jobs:
             ghcr.io/${{ github.repository }}
             quay.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') && matrix.arch.name == 'amd64' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v') && matrix.arch.name == 'amd64' && !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=semver,pattern={{major}},enable=${{ startsWith(github.ref, 'refs/tags/v') && matrix.arch.name == 'amd64' }}
+            type=raw,value=latest,enable=${{ matrix.arch.name == 'amd64' }}
 
-      # Combines the above tags and adds 'latest' (for amd64) + 'latest-arch'
-      - name: Generate complete tags string
-        id: tag_combine
-        run: |
-          cat > /tmp/get-tags << 'EOF'
-          #!/usr/bin/env bash
-          set -eu
-          tags="latest-${{ matrix.arch.name }}"
-          if [[ ${{ matrix.arch.name }} == "amd64" ]]; then
-              tags="$tags latest"
-          fi
-          if [[ ${{ steps.tags_version_arch.outputs.exists }} == "true" ]]; then
-              tags="$tags ${{ steps.tags_version_arch.outputs.labels }}"
-          fi
-          if [[ ${{ steps.tags_version.outputs.exists }} == "true" ]]; then
-              tags="$tags ${{ steps.tags_version.outputs.labels }}"
-          fi
-          echo "$tags"
-          EOF
-          echo "::set-output name=tags::$(bash /tmp/get-tags)"
+            type=semver,pattern={{version}},suffix=${{ matrix.arch.name }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{major}}.{{minor}},suffix=${{ matrix.arch.name }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{major}},suffix=${{ matrix.arch.name }},enable=${{ startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=raw,value=latest-${{ matrix.arch.name }}
 
       - name: Create binary target directory
         run: mkdir -p target/${{ matrix.arch.artifact }}/release
@@ -252,4 +220,4 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          tags: ${{ steps.tag_combine.outputs.tags }}
+          tags: ${{ steps.tags.outputs.tags }}
