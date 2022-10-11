@@ -1,6 +1,6 @@
 [package]
 name = "clouddns-nat-helper"
-version = "0.1.1"
+version = "0.1.1-alpha.4"
 edition = "2021"
 description = "Autogenerate A records for NAT setups from AAA records in cloud providers"
 license-file = "LICENSE"

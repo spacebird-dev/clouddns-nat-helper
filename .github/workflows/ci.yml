@@ -107,7 +107,7 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
 
   release:
-    name: Release ${{ matrix.target }}
+    name: Release ${{ matrix.target.name }}
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     needs:
@@ -117,12 +117,15 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - aarch64-unknown-linux-gnu
-          - x86_64-unknown-linux-gnu
+          - name: aarch64-unknown-linux-gnu
+            binary: ${{ github.event.repository.name }}
+          - name: x86_64-unknown-linux-gnu
+            binary: ${{ github.event.repository.name }}
           # MacOS support isn't available in cross natively, we'd need to build custom images
           # skip for now
           #- x86_64-apple-darwin
-          - x86_64-pc-windows-gnu
+          - name: x86_64-pc-windows-gnu
+            binary: ${{ github.event.repository.name }}.exe
     steps:
       - name: Check out codebase
         uses: actions/checkout@v3
@@ -130,7 +133,7 @@ jobs:
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          target: "${{ matrix.target }}"
+          target: "${{ matrix.target.name }}"
           override: true
           toolchain: stable
 
@@ -141,12 +144,12 @@ jobs:
         run: cargo install cross
 
       - name: Build release binary
-        run: cross build --release --target ${{ matrix.target }}
+        run: cross build --release --target ${{ matrix.target.name }}
         env:
           RUSTFLAGS: "-Dwarnings"
 
       - name: Create asset archive
-        run: tar cvzf binary.tar.gz --directory=target/${{ matrix.target }}/release ${{ github.event.repository.name }}
+        run: tar cvzf binary.tar.gz --directory=target/${{ matrix.target.name }}/release ${{ matrix.target.binary }}
 
       - name: Get current GitHub release
         id: get_release
@@ -162,5 +165,5 @@ jobs:
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: binary.tar.gz
-          asset_name: ${{ github.event.repository.name }}-${{ matrix.target }}.tar.gz
+          asset_name: ${{ github.event.repository.name }}-${{ matrix.target.name }}.tar.gz
           asset_content_type: application/tar+gzip
