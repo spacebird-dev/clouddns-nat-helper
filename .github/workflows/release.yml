@@ -189,7 +189,7 @@ jobs:
       # arch is one of matrix.arch.name, but we also generate a set of tags without arch (default, this is amd64)
       #
       # Note that no tag '0[-arch]' will be generated, as 0.x versions are unstable and should not be relied upon
-      - name: Generate docker tags [version] (for amd64)
+      - name: Generate docker tags
         id: tags
         uses: docker/metadata-action@v4
         with:
@@ -215,8 +215,8 @@ jobs:
       - name: Download binary artifact
         uses: actions/download-artifact@v1
         with:
-          name: ${{ github.event.repository.name }}_${{ matrix.target.name }}
-          path: target/${{ matrix.arch.artifact }}/release/${{ github.event.repository.name }}
+          name: ${{ matrix.arch.artifact }}
+          path: target/${{ matrix.arch.artifact }}/release/
 
       - name: Build and push
         uses: docker/build-push-action@v3
