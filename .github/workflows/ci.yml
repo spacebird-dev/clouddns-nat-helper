@@ -73,7 +73,12 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: cross-linux-musl
-          path: /usr/bin/
+          path: /tmp
+
+      - name: Install cross
+        run: |
+          sudo mv /tmp/cross /usr/bin/cross
+          sudo chmod +x /usr/bin/cross
 
       - name: Build binary
         run: |
@@ -91,17 +96,17 @@ jobs:
       - name: Install cargo-make binary
         uses: davidB/rust-cargo-make@v1
         if: |
-          matrix.target.name == "x86_64-unknown-linux-gnu"
+          matrix.target.name == 'x86_64-unknown-linux-gnu'
       - name: Build coverage
         run: cargo make coverage-llvm-cov
         if: |
-          matrix.target.name == "x86_64-unknown-linux-gnu"
+          matrix.target.name == 'x86_64-unknown-linux-gnu'
       - name: Upload coverage report
         uses: codecov/codecov-action@v3
         with:
           files: ./lcov.info
         if: |
-          matrix.target.name == "x86_64-unknown-linux-gnu"
+          matrix.target.name == 'x86_64-unknown-linux-gnu'
 
   docs:
     name: "Generate rustdoc"

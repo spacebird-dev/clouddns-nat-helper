@@ -78,7 +78,12 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: cross-linux-musl
-          path: /usr/bin/
+          path: /tmp/
+
+      - name: Install cross
+        run: |
+          sudo mv /tmp/cross /usr/bin/cross
+          sudo chmod +x /usr/bin/cross
 
       - name: Build release binary
         run: cross build --release --target ${{ matrix.target.name }}
