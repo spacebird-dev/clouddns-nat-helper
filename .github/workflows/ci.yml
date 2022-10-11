@@ -100,7 +100,7 @@ jobs:
       - ci
       - docs
     strategy:
-      fail-fast: no
+      fail-fast: false
       matrix:
         target:
           - aarch64-unknown-linux-gnu
