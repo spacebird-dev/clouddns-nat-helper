@@ -6,6 +6,11 @@ install_crate = { rustup_component_name = "clippy", binary = "clippy", test_arg 
 private = true
 install_crate = { rustup_component_name = "rustfmt", binary = "rustfmt", test_arg = "--help" }
 
+[tasks.install-cross]
+private = true
+install_crate = { crate_name = "cross", binary = "cross", test_arg = "--help" }
+
+
 [tasks.install-pre-commit-hook]
 private = true
 script = '''
@@ -27,7 +32,12 @@ fi
 '''
 
 [tasks.dev-env]
-dependencies = ["install-clippy", "install-rustfmt", "install-pre-commit-hook"]
+dependencies = [
+    "install-clippy",
+    "install-rustfmt",
+    "install-pre-commit-hook",
+    "install-cross"
+]
 
 [tasks.coverage-llvm-cov]
 install_crate = "cargo-llvm-cov"

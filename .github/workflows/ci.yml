@@ -118,8 +118,11 @@ jobs:
           override: true
           toolchain: stable
 
+      - name: Install cross
+        run: cargo install cross
+
       - name: Build release binary
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cross build --release --target ${{ matrix.target }}
         env:
           RUSTFLAGS: "-Dwarnings"
 
