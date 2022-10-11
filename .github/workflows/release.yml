@@ -215,7 +215,7 @@ jobs:
       - name: Download binary artifact
         uses: actions/download-artifact@v1
         with:
-          name: ${{ github.event.repository.name }}_${{ matrix.target.name }}
+          name: ${{ github.event.repository.name }}_${{ matrix.arch.artifact }}
           path: target/${{ matrix.arch.artifact }}/release/
 
       - name: Build and push
