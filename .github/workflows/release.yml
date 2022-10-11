@@ -1,0 +1,250 @@
+---
+name: CI
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  crate-io:
+    name: "Publish to crates.io"
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out codebase
+        uses: actions/checkout@v3
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          override: true
+          toolchain: stable
+
+      - name: Enable cargo caching
+        uses: Swatinem/rust-cache@v2
+
+      - name: Publish crate
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
+
+  # Adapted from https://github.com/cantino/mcfly/blob/master/.github/workflows/mean_bean_ci.yml
+  # We use cross for all builds for easier cross-compiling to non amd64-linux
+  get-cross:
+    name: Prepare cross
+    runs-on: ubuntu-latest
+    steps:
+      - uses: XAMPPRocky/get-github-release@v1
+        id: cross
+        with:
+          owner: cross-rs
+          repo: cross
+          matches: cross-x86_64-unknown-linux-musl
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v1
+        with:
+          name: cross-linux-musl
+          path: ${{ steps.cross.outputs.install_path }}
+
+  build:
+    name: Build ${{ matrix.target.name }}
+    runs-on: ubuntu-latest
+    needs:
+      - get-cross
+    strategy:
+      matrix:
+        target:
+          - name: aarch64-unknown-linux-gnu
+            extension: ""
+          - name: x86_64-unknown-linux-gnu
+            extension: ""
+          - name: x86_64-pc-windows-gnu
+            extension: ".exe"
+    steps:
+      - name: Check out codebase
+        uses: actions/checkout@v3
+
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          target: "${{ matrix.target.name }}"
+          override: true
+          toolchain: stable
+
+      - name: Enable cargo caching
+        uses: Swatinem/rust-cache@v2
+
+      - name: Get cross
+        uses: actions/download-artifact@v1
+        with:
+          name: cross-linux-musl
+          path: /usr/bin/
+
+      - name: Build release binary
+        run: cross build --release --target ${{ matrix.target.name }}
+        env:
+          RUSTFLAGS: "-Dwarnings"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{ github.event.repository.name }}_${{ matrix.target.name }}
+          path: target/${{ matrix.target.name }}/release/${{ matrix.target.name }}${{ matrix.target.extension }}
+
+  gh-release-artifacts:
+    name: Upload ${{ matrix.target }} to GH Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    strategy:
+      matrix:
+        target:
+          - name: aarch64-unknown-linux-gnu
+            extension: ""
+          - name: x86_64-unknown-linux-gnu
+            extension: ""
+          - name: x86_64-pc-windows-gnu
+            extension: ".exe"
+    steps:
+      - name: Check out codebase
+        uses: actions/checkout@v3
+
+      - name: Get target binary artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: ${{ github.event.repository.name }}_${{ matrix.target.name }}
+          path: /tmp/${{ github.event.repository.name }}_${{ matrix.target.name }}${{ matrix.target.extension }}
+
+      - name: Create release asset archive
+        run: tar cvzf binary.tar.gz --directory=/tmp ${{ github.event.repository.name }}_${{ matrix.target.name }}${{ matrix.target.extension }}
+
+      - name: Get current GitHub release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release artifact
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: binary.tar.gz
+          asset_name: ${{ github.event.repository.name }}-${{ matrix.target.name }}.tar.gz
+          asset_content_type: application/tar+gzip
+
+  docker:
+    name: "Publish ${{ matrix.arch.name }} Docker image"
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - name: amd64
+            artifact: x86_64-unknown-linux-gnu
+          - name: arm64
+            artifact: aarch64-unknown-linux-gnu
+    steps:
+      - name: Check out codebase
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to quay.io
+        uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_TOKEN}}
+
+      # Versioned docker tags with arch specifier.
+      # Example: (v1.2.3) => 1-amd64, 1.2-amd64, 1.2.3-amd64
+      - name: Generate docker tags [version-arch]
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: tags_version_arch
+        uses: docker/metadata-action@v4
+        with:
+          flavor: |
+            suffix=${{ matrix.arch.name }}
+            latest=false
+          images: |
+            ${{ github.repository }}
+            ghcr.io/${{ github.repository }}
+            quay.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      # Versioned docker tags without arch (i.e. default == amd64).
+      # Example: (v1.2.3) => 1, 1.2, 1.2.3
+      - name: Generate docker tags [version] (for amd64)
+        if: |
+          startsWith(github.ref, 'refs/tags/v')
+          && matrix.arch.name == 'amd64'
+        id: tags_version
+        uses: docker/metadata-action@v4
+        with:
+          flavor: |
+            latest=false
+          images: |
+            ${{ github.repository }}
+            ghcr.io/${{ github.repository }}
+            quay.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      # Combines the above tags and adds 'latest' (for amd64) + 'latest-arch'
+      - name: Generate complete tags string
+        id: tag_combine
+        run: |
+          cat > /tmp/get-tags << 'EOF'
+          #!/usr/bin/env bash
+          set -eu
+          tags="latest-${{ matrix.arch.name }}"
+          if [[ ${{ matrix.arch.name }} == "amd64" ]]; then
+              tags="$tags latest"
+          fi
+          if [[ ${{ steps.tags_version_arch.outputs.exists }} == "true" ]]; then
+              tags="$tags ${{ steps.tags_version_arch.outputs.labels }}"
+          fi
+          if [[ ${{ steps.tags_version.outputs.exists }} == "true" ]]; then
+              tags="$tags ${{ steps.tags_version.outputs.labels }}"
+          fi
+          echo "$tags"
+          EOF
+          echo "::set-output name=tags::$(bash /tmp/get-tags)"
+
+      - name: Create binary target directory
+        run: mkdir -p target/${{ matrix.arch.artifact }}/release
+      - name: Download binary artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: ${{ github.event.repository.name }}_${{ matrix.target.name }}
+          path: target/${{ matrix.arch.artifact }}/release/${{ github.event.repository.name }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          tags: ${{ steps.tag_combine.outputs.tags }}

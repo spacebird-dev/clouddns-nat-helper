@@ -1,0 +1,15 @@
+# Build articates
+target
+
+# Git
+.git
+.gitignore
+
+# CI
+.github
+.pre-commit-config.yaml
+lcov.info
+
+# Docs
+imgs
+*.md

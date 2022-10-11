@@ -9,7 +9,9 @@ keywords = ["dns", "cloud", "cloudflare", "nat", "ipv4"]
 categories = ["command-line-utilities"]
 exclude = [
     ".github",
-    "imgs"
+    "imgs",
+    ".dockerignore",
+    "Dockerfile"
 ]
 
 [dev-dependencies]

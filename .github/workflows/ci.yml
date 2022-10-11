@@ -9,7 +9,7 @@ on:
 
 jobs:
   lint:
-    name: lint
+    name: Linting (pre-commit)
     runs-on: ubuntu-latest
     steps:
       - name: Check out codebase
@@ -27,11 +27,37 @@ jobs:
       - name: Run pre-commit checks
         uses: pre-commit/action@v3.0.0
 
-  ci:
-    needs:
-      - lint
-    name: "CI"
+  # Adapted from https://github.com/cantino/mcfly/blob/master/.github/workflows/mean_bean_ci.yml
+  # We use cross for all builds for easier cross-compiling to non amd64-linux
+  get-cross:
+    name: Prepare cross
     runs-on: ubuntu-latest
+    steps:
+      - uses: XAMPPRocky/get-github-release@v1
+        id: cross
+        with:
+          owner: cross-rs
+          repo: cross
+          matches: cross-x86_64-unknown-linux-musl
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v1
+        with:
+          name: cross-linux-musl
+          path: ${{ steps.cross.outputs.install_path }}
+
+  build-test:
+    needs:
+      - get-cross
+    name: "Build+Test (${{ matrix.target.name }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: aarch64-unknown-linux-gnu
+          - name: x86_64-unknown-linux-gnu
+          - name: x86_64-pc-windows-gnu
+
     steps:
       - name: Check out codebase
         uses: actions/checkout@v3
@@ -43,24 +69,42 @@ jobs:
       - name: Enable cargo caching
         uses: Swatinem/rust-cache@v2
 
+      - name: Get cross
+        uses: actions/download-artifact@v1
+        with:
+          name: cross-linux-musl
+          path: /usr/bin/
+
+      - name: Build binary
+        run: |
+          cross build --target ${{ matrix.target.name }}
+          cross build --target ${{ matrix.target.name }} --all-features
+        env:
+          RUSTFLAGS: "-Dwarnings"
+
+      - name: Test binary
+        run: |
+          cross test --target ${{ matrix.target.name }}
+          cross test --target ${{ matrix.target.name }} --all-features
+
+      # Only build coverage for amd64 linux variants, that's enough
       - name: Install cargo-make binary
         uses: davidB/rust-cargo-make@v1
-
-      - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-
+        if: |
+          matrix.target.name == "x86_64-unknown-linux-gnu"
       - name: Build coverage
         run: cargo make coverage-llvm-cov
-
+        if: |
+          matrix.target.name == "x86_64-unknown-linux-gnu"
       - name: Upload coverage report
         uses: codecov/codecov-action@v3
         with:
           files: ./lcov.info
+        if: |
+          matrix.target.name == "x86_64-unknown-linux-gnu"
 
   docs:
-    name: "Docs"
+    name: "Generate rustdoc"
     runs-on: ubuntu-latest
     steps:
       - name: Check out codebase
@@ -76,94 +120,7 @@ jobs:
       - name: Enable cargo caching
         uses: Swatinem/rust-cache@v2
 
-
       - name: Generate docs
         run: cargo doc --no-deps
         env:
           RUSTDOCFLAGS: "-Dwarnings"
-
-  publish:
-    name: "Publish to crates.io"
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    needs:
-      - ci
-      - docs
-    steps:
-      - name: Check out codebase
-        uses: actions/checkout@v3
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          override: true
-          toolchain: stable
-
-      - name: Enable cargo caching
-        uses: Swatinem/rust-cache@v2
-
-      - name: Publish crate
-        run: cargo publish
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
-
-  release:
-    name: Release ${{ matrix.target.name }}
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    needs:
-      - ci
-      - docs
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - name: aarch64-unknown-linux-gnu
-            binary: ${{ github.event.repository.name }}
-          - name: x86_64-unknown-linux-gnu
-            binary: ${{ github.event.repository.name }}
-          # MacOS support isn't available in cross natively, we'd need to build custom images
-          # skip for now
-          #- x86_64-apple-darwin
-          - name: x86_64-pc-windows-gnu
-            binary: ${{ github.event.repository.name }}.exe
-    steps:
-      - name: Check out codebase
-        uses: actions/checkout@v3
-
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          target: "${{ matrix.target.name }}"
-          override: true
-          toolchain: stable
-
-      - name: Enable cargo caching
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install cross
-        run: cargo install cross
-
-      - name: Build release binary
-        run: cross build --release --target ${{ matrix.target.name }}
-        env:
-          RUSTFLAGS: "-Dwarnings"
-
-      - name: Create asset archive
-        run: tar cvzf binary.tar.gz --directory=target/${{ matrix.target.name }}/release ${{ matrix.target.binary }}
-
-      - name: Get current GitHub release
-        id: get_release
-        uses: bruceadams/get-release@v1.2.3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload release artifact
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: binary.tar.gz
-          asset_name: ${{ github.event.repository.name }}-${{ matrix.target.name }}.tar.gz
-          asset_content_type: application/tar+gzip
