@@ -1,3 +1,8 @@
+# Don't use cargo-makes included tasks
+[config]
+skip_core_tasks = true
+
+# DEPENDENCIES
 [tasks.install-clippy]
 private = true
 install_crate = { rustup_component_name = "clippy", binary = "clippy", test_arg = "--help" }
@@ -9,7 +14,6 @@ install_crate = { rustup_component_name = "rustfmt", binary = "rustfmt", test_ar
 [tasks.install-cross]
 private = true
 install_crate = { crate_name = "cross", binary = "cross", test_arg = "--help" }
-
 
 [tasks.install-pre-commit-hook]
 private = true
@@ -32,15 +36,152 @@ fi
 '''
 
 [tasks.dev-env]
+description = "Configure a development environment"
 dependencies = [
     "install-clippy",
     "install-rustfmt",
     "install-pre-commit-hook",
-    "install-cross"
 ]
 
-[tasks.coverage-llvm-cov]
+# LINTING
+[tasks.lint]
+description = "Lint this project"
+dependencies = ["clippy", "format"]
+[tasks.clippy]
+description = "Run clippy"
+dependencies = ["install-clippy"]
+command = "cargo"
+args = ["clippy"]
+[tasks.format]
+description = "Format the codebase"
+dependencies = ["install-rustfmt"]
+command = "cargo"
+args = ["fmt"]
+
+# BUILDS
+[tasks.build]
+description = "Build the project"
+dependencies = [
+    "build-development-default",
+    "build-development-target",
+    "build-release-target",
+    "build-release-default"
+]
+[tasks.build-development-target]
+private = true
+condition = { env_true = ["TARGET"], profiles = ["development"] }
+dependencies = ["install-cross"]
+command = "cross"
+args = ["build", "--all-features", "--target", "${TARGET}"]
+[tasks.build-development-default]
+private = true
+condition = { env_not_set = ["TARGET"], profiles = ["development"] }
+dependencies = ["install-cross"]
+command = "cross"
+args = ["build", "--all-features"]
+[tasks.build-release-target]
+private = true
+condition = { env_true = ["TARGET"], profiles = ["release"] }
+dependencies = ["install-cross"]
+command = "cross"
+args = ["build", "--all-features", "--target", "${TARGET}", "--release"]
+[tasks.build-release-default]
+private = true
+condition = { env_not_set = ["TARGET"], profiles = ["release"] }
+dependencies = ["install-cross"]
+command = "cross"
+args = ["build", "--all-features", "--release"]
+
+
+# TESTS
+[tasks.test]
+description = "Test the project"
+dependencies = [
+    "test-default",
+    "test-target"
+]
+[tasks.test-target]
+private = true
+condition = { env_true = ["TARGET"] }
+dependencies = ["install-cross"]
+command = "cross"
+args = ["test", "--all-features", "--target", "${TARGET}"]
+[tasks.test-default]
+private = true
+condition = { env_not_set = ["TARGET"] }
+dependencies = ["install-cross"]
+command = "cross"
+args = ["test", "--all-features"]
+
+
+# DOCKER
+[tasks.docker]
+description = "Build a docker image"
+dependencies = [
+    "docker-development-default",
+    "docker-development-target",
+    "docker-release-default",
+    "docker-release-target"
+]
+[tasks.docker-development-default]
+private = true
+condition = { env_not_set = ["TARGET"], profiles = ["development"]}
+dependencies = [ "build-development-default" ]
+command = "docker"
+args = [
+    "build", "-t", "${CARGO_MAKE_PROJECT_NAME}:${CARGO_MAKE_PROFILE}", ".",
+    "--build-arg", "target=${CARGO_MAKE_RUST_TARGET_TRIPLE}",
+    "--build-arg", "profile=debug",
+    "--build-arg", "arch=amd64",
+]
+[tasks.docker-development-target]
+private = true
+condition = { env_true = ["TARGET"], profiles = ["development"]}
+dependencies = [ "build-development-target" ]
+command = "docker"
+args = [
+    "build", "-t", "${CARGO_MAKE_PROJECT_NAME}:${CARGO_MAKE_PROFILE}", ".",
+    "--build-arg", "target=${TARGET}",
+    "--build-arg", "profile=debug",
+    "--build-arg", "arch=${DOCKER_ARCH}",
+]
+[tasks.docker-release-default]
+private = true
+condition = { env_not_set = ["TARGET"], profiles = ["release"]}
+dependencies = [ "build-release-default" ]
+command = "docker"
+args = [
+    "build", "-t", "${CARGO_MAKE_PROJECT_NAME}:${CARGO_MAKE_PROFILE}", ".",
+    "--build-arg", "target=${CARGO_MAKE_RUST_TARGET_TRIPLE}",
+    "--build-arg", "profile=release",
+    "--build-arg", "arch=amd64",
+]
+[tasks.docker-release-target]
+private = true
+condition = { env_true = ["TARGET"], profiles = ["release"]}
+dependencies = [ "build-release-target" ]
+command = "docker"
+args = [
+    "build", "-t", "${CARGO_MAKE_PROJECT_NAME}:${CARGO_MAKE_PROFILE}", ".",
+    "--build-arg", "target=${TARGET}",
+    "--build-arg", "profile=release",
+    "--build-arg", "arch=${DOCKER_ARCH}",
+]
+
+[tasks.docs]
+description = "Generate rustdoc for the project"
+command = "cargo"
+args = ["doc", "--no-deps"]
+
+# Cannot use cross for this, so it will trigger a build on the host. Oh well
+# todo: look at cargo-make support
+[tasks.coverage]
+description = "Generate a coverage report"
 install_crate = "cargo-llvm-cov"
 command = "cargo"
 args = ["llvm-cov", "--lcov", "--output-path", "lcov.info"]
-dependencies = ["test"]
+
+[tasks.clean]
+description = "Cleanup"
+command = "cargo"
+args = ["clean"]

@@ -221,3 +221,7 @@ jobs:
         with:
           context: .
           tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            target=${{ matrix.arch.artifact }}
+            profile=release
+            arch=${{ matrix.arch.name }}

@@ -1,5 +1,6 @@
-# Build articates
-target
+# Build articats, but keep the binary
+target/**/deps
+target/**/incremental
 
 # Git
 .git

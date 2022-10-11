@@ -1,8 +1,14 @@
-ARG ARCH=amd64
-ARG TARGET=x86_64-unknown-linux-gnu
+ARG arch=amd64
 
-FROM ${ARCH}/debian:bullseye-slim
-COPY target/${TARGET}/release/clouddns-nat-helper /app/
+FROM ${arch}/debian:bullseye-slim
+
+ARG target=x86_64-unknown-linux-gnu
+ARG profile=debug
+
+ENV TARGET=${target}
+ENV PROFILE=${profile}
+
+COPY target/${target}/${PROFILE}/clouddns-nat-helper /app/
 
 # run unprivileged
 USER 1001

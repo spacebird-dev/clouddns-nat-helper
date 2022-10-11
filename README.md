@@ -78,7 +78,33 @@ If you have `cargo` installed, simply run
 
 `cargo install clouddns-nat-helper`
 
-## As a k8s application
+## Via Docker
+
+Docker images are automatically built and pushed to the following registries:
+
+- [DockerHub](https://hub.docker.com/r/maxhoesel/clouddns-nat-helper)
+- [GitHub Packages](https://ghcr.io/maxhoesel/clouddns-nat-helper)
+- [Quay.io](https://quay.io/maxhoesel/clouddns-nat-helper)
+
+Notes:
+- The `latest` tag points to this repositories master branch and **may break at any time**.
+- Supported architectures: `amd64` (default), `arm64` (use tags with the `-arm64` suffix)
+
+To pass arguments to the image, use environment variables or an environment file:
+
+
+```
+$ docker run --env-file ./.env maxhoesel/clouddns-nat-helper:0.1
+
+$ cat .env
+# there are more configuration options available, run with --help, check the README and see src/bin/cli/mod.rs for more details
+CLOUDDNS_NAT_PROVIDER=cloudflare
+CLOUDDNS_NAT_CLOUDFLARE_API_TOKEN=abc123456789
+
+CLOUDDNS_NAT_SOURCE=hostname
+CLOUDDNS_NAT_IPV4_HOSTNAME=maxhoesel.de
+```
+## In a kubernetes cluster
 
 TODO, there will be a helm chart
 
@@ -142,8 +168,49 @@ To use the pre-commit hooks, `pre-commit` needs to be installed and in $PATH
 
 ## Builds, Tests, Docs
 
-Use the standard `cargo` commands for builds, tests, etc.
+Most common actions can be performed with `cargo-make`.
+This will automatically install build-time dependencies and perform other setup steps, if required
 
-To get a test coverage report: `cargo make coverage-llvm-cov`
+You can use either `cargo make` or `makers` to run the commands below.
 
-To generate docs: `cargo make docs`
+### Linting
+
+- `cargo make lint`
+
+### Create a build
+
+#### Default target
+
+- Debug: `cargo make build`
+- Release: `cargo make --profile release build`
+
+#### Custom target
+
+- Debug: `cargo make -e TARGET=aarch64-unknown-linux-gnu build`
+- Release: `cargo make -e TARGET=aarch64-unknown-linux-gnu --profile release build`
+
+### Run Tests
+
+- Default target: `cargo make test`
+- Custom target: `cargo make -e TARGET=aarch64-unknown-linux-gnu test`
+- Get a coverage report: `cargo make coverage`
+
+### Create docs
+
+- `cargo make docs`
+
+### Create Docker images
+
+Note: images will be saved with the tag `clouddns-nat-helper:<development/release>`
+
+#### Default target
+
+- Debug: `cargo make docker`
+- Release: `cargo make --profile release docker`
+
+#### Custom target
+
+Note: Set DOCKER_ARCH to one of the [officially supported `debian` image architectures](https://hub.docker.com/_/debian)
+
+- Debug: `cargo make -e TARGET=aarch64-unknown-linux-gnu -e DOCKER_ARCH=arm64v8 docker`
+- Release: `cargo make --profile release -e TARGET=aarch64-unknown-linux-gnu -e DOCKER_ARCH=arm64v8 docker`
