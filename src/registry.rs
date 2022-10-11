@@ -24,7 +24,6 @@ use mockall::automock;
 /// This is enforced by only allowing record changes in [`crate::provider::Provider`] through [`crate::plan::Plan`]s,
 /// which in turn uses a registry to change domain ownership.
 #[cfg_attr(test, automock)]
-#[cfg_attr(not(test), allow(clippy::needless_lifetimes))] // needed for mockall
 pub trait ARegistry {
     /// Set the registry tenant name
     fn set_tenant(&mut self, tenant: String);
@@ -34,9 +33,11 @@ pub trait ARegistry {
     fn all_domains(&self) -> Vec<Domain>;
     /// Attempts to claim a domain by name with the registry's backend.
     /// Returns a result containing [`Ok`] if the domain is claimed or a [`RegistryError`] if the domain could not be claimed.
+    #[allow(clippy::needless_lifetimes)] // needed for mockall
     fn claim<'a>(&mut self, name: DomainName<'a>) -> Result<(), RegistryError>;
     /// Attempt to release a claimed domain with the registry's backend.
     /// Returns a result containing [`Ok`] if the domain is released or a [`RegistryError`] if the domain could not be released.
+    #[allow(clippy::needless_lifetimes)] // needed for mockall
     fn release<'a>(&mut self, name: DomainName<'a>) -> Result<(), RegistryError>;
 }
 
