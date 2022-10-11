@@ -68,6 +68,8 @@ jobs:
           toolchain: stable
       - name: Enable cargo caching
         uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target.name }}
 
       - name: Get cross
         uses: actions/download-artifact@v1
