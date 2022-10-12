@@ -27,3 +27,6 @@ go.work
 
 # Coverage
 lcov.info
+
+# Python venvs
+.venv

@@ -4,13 +4,14 @@ target/**/incremental
 
 # Git
 .git
-.gitignore
-
-# CI
 .github
-.pre-commit-config.yaml
+
+# CI stuff
 lcov.info
 
 # Docs
 imgs
 *.md
+
+# Helm/k8s stuff
+helm

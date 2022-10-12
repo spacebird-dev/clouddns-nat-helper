@@ -58,7 +58,7 @@ pub struct Cli {
     )]
     pub interval: u64,
 
-    /// What A record actions are permitted. createonly: create,upsert: create,update, sync: create,update,delete.
+    /// What A record actions are permitted. createonly: create, upsert: create,update, sync: create,update,delete.
     #[arg(
         value_enum,
         long,
@@ -99,7 +99,7 @@ pub struct Cli {
     )]
     pub cloudflare_proxied: bool,
 
-    /// Ipv4 address to put into all A records when using the 'fixed` address sourc'
+    /// Ipv4 address to put into all A records when using the 'fixed` address source
     #[arg(
         long,
         required_if_eq("source", "fixed"),
@@ -108,8 +108,8 @@ pub struct Cli {
     )]
     pub ipv4_fixed_address: Option<Ipv4Addr>,
 
-    // Resolve this hostname to get the Ipv4 address to put into a records.
-    // Only has an effect if 'source' == 'hostname'
+    /// Resolve this hostname to get the Ipv4 address to put into a records.
+    /// Only has an effect if 'source' == 'hostname'
     #[arg(
         long,
         required_if_eq("source", "hostname"),
@@ -118,7 +118,7 @@ pub struct Cli {
     )]
     pub ipv4_hostname: Option<String>,
 
-    /// List of DNS servers to query when resolving 'ipv4_hostname'.
+    /// List of DNS servers to query when resolving 'ipv4_hostname', as a comma-separated string.
     /// Only has an effect if 'source' == 'hostname'
     #[arg(
         long,
