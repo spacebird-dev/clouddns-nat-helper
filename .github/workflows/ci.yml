@@ -72,7 +72,7 @@ jobs:
           key: ${{ matrix.target.name }}
 
       - name: Get cross
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: cross-linux-musl
           path: /tmp

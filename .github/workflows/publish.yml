@@ -81,7 +81,7 @@ jobs:
           key: "{{ matrix.target.name }}"
 
       - name: Get cross
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: cross-linux-musl
           path: /tmp/
@@ -120,7 +120,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Get target binary artifact
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: ${{ github.event.repository.name }}_${{ matrix.target.name }}
           path: /tmp/${{ github.event.repository.name }}_${{ matrix.target.name }}${{ matrix.target.extension }}
@@ -215,7 +215,7 @@ jobs:
       - name: Create binary target directory
         run: mkdir -p target/${{ matrix.arch.artifact }}/release
       - name: Download binary artifact
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: ${{ github.event.repository.name }}_${{ matrix.arch.artifact }}
           path: target/${{ matrix.arch.artifact }}/release/
