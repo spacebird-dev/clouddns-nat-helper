@@ -24,6 +24,8 @@ jobs:
         if: startsWith(github.event.head_commit.message, env.DESIRED_VER)
         uses: release-drafter/release-drafter@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Need to use a PAT here, as the `release` trigger on publish will not work otherwise,
+          # preventing tagged released from being published
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
         with:
           publish: true
