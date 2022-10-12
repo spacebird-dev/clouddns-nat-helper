@@ -5,7 +5,7 @@
 #
 # The release PR bumps the version number in affected files, such as Cargo.toml, helm charts, pyproject.toml, etc.
 #
-# The actual release is published by the release-trigger.yml workflow, while artifacts are built by publish.yml
+# The actual release is published by the release-push.yml workflow, while artifacts are built by publish.yml
 name: Create new Release PR
 
 on:

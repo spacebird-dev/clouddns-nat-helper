@@ -9,18 +9,19 @@ on:
 
 jobs:
   publish-release:
-    name: Trigger release
+    name: Push release (or draft)
     runs-on: ubuntu-latest
     steps:
-      - name: Update and retrieve current release version
+      - name: Update and retrieve current draft release version
         uses: release-drafter/release-drafter@v5
         id: drafter
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Show desired relese version
-        run: echo "${{ format('Release {0}', steps.drafter.outputs.release_name) }}"
+      - name: Save desired version string
+        run: |
+          echo "DESIRED_VER='Release ${{steps.drafter.outputs.release_name }}'" >> $GITHUB_ENV
       - name: Trigger release if version matches latest commit message
-        if: startsWith(github.event.head_commit.message, format('Release {0}', steps.drafter.outputs.release_name))
+        if: startsWith(github.event.head_commit.message, env.DESIRED_VER)
         uses: release-drafter/release-drafter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
