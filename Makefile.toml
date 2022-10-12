@@ -173,8 +173,7 @@ description = "Generate rustdoc for the project"
 command = "cargo"
 args = ["doc", "--no-deps"]
 
-# Cannot use cross for this, so it will trigger a build on the host. Oh well
-# todo: look at cargo-make support
+
 [tasks.coverage]
 description = "Generate a coverage report"
 install_crate = "cargo-llvm-cov"
