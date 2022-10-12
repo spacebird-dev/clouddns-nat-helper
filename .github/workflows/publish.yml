@@ -45,7 +45,7 @@ jobs:
           repo: cross
           matches: cross-x86_64-unknown-linux-musl
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v1
+      - uses: actions/upload-artifact@v3
         with:
           name: cross-linux-musl
           path: ${{ steps.cross.outputs.install_path }}
@@ -95,7 +95,7 @@ jobs:
         run: cross build --release --target ${{ matrix.target.name }}
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ github.event.repository.name }}_${{ matrix.target.name }}
           path: target/${{ matrix.target.name }}/release/${{ github.event.repository.name }}${{ matrix.target.extension }}
