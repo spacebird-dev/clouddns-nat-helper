@@ -203,13 +203,13 @@ jobs:
             quay.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') && matrix.arch.name == 'amd64' }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v') && matrix.arch.name == 'amd64' && !startsWith(github.ref, 'refs/tags/v0.') }}
-            type=semver,pattern={{major}},enable=${{ startsWith(github.ref, 'refs/tags/v') && matrix.arch.name == 'amd64' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v') && matrix.arch.name == 'amd64' }}
+            type=semver,pattern={{major}},enable=${{ startsWith(github.ref, 'refs/tags/v') && matrix.arch.name == 'amd64' && !startsWith(github.ref, 'refs/tags/v0.') }}
             type=raw,value=latest,enable=${{ matrix.arch.name == 'amd64' }}
 
-            type=semver,pattern={{version}},suffix=${{ matrix.arch.name }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            type=semver,pattern={{major}}.{{minor}},suffix=${{ matrix.arch.name }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            type=semver,pattern={{major}},suffix=${{ matrix.arch.name }},enable=${{ startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=semver,pattern={{version}},suffix=-${{ matrix.arch.name }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{major}}.{{minor}},suffix=-${{ matrix.arch.name }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{major}},suffix=-${{ matrix.arch.name }},enable=${{ startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/v0.') }}
             type=raw,value=latest-${{ matrix.arch.name }}
 
       - name: Create binary target directory
