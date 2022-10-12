@@ -19,7 +19,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Save desired version string
         run: |
-          echo "DESIRED_VER='Release ${{ steps.drafter.outputs.name }}'" >> $GITHUB_ENV
+          echo "DESIRED_VER=Release ${{ steps.drafter.outputs.name }}" >> $GITHUB_ENV
       - name: Trigger release if version matches latest commit message
         if: startsWith(github.event.head_commit.message, env.DESIRED_VER)
         uses: release-drafter/release-drafter@v5
