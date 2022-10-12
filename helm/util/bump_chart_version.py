@@ -62,7 +62,7 @@ def main():
         print(f"Could not determine version mismatch between Cargo.toml ({cargo_app_ver}) "
               f"and Chart.yaml ({current_chart_ver})")
         return
-    chart_data["appVersion"] = cargo_app_ver
+    chart_data["appVersion"] = str(cargo_app_ver)
 
     print(f"New chart version: {chart_data['version']}")
     print(f"New chart appVersion: {chart_data['appVersion']}")
