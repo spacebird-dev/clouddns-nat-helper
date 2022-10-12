@@ -42,14 +42,12 @@ version-resolver:
   minor:
     labels:
       - 'pr-breaking'
-      #- 'pr-feature' # only up the minor version when step-cli versions change
+      - 'pr-feature'
   patch:
     labels:
-      - 'pr-feature'
       - 'fix'
       - 'pr-bugfix'
       - 'bug'
-      - 'enhancement'
   default: patch
 
 template: |
