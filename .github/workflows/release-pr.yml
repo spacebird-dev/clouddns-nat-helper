@@ -6,17 +6,16 @@
 # The release PR bumps the version number in affected files, such as Cargo.toml, helm charts, pyproject.toml, etc.
 #
 # The actual release is published by the release-trigger.yml workflow, while artifacts are built by publish.yml
-name: Create Release PR
+name: Create new Release PR
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+
 
 jobs:
   update-release-draft:
     name: Update Release Draft
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       release_name: ${{ steps.drafter.outputs.name }}
@@ -75,10 +74,9 @@ jobs:
             helm/charts/**/Chart.yaml
           title: Release ${{ needs.update-release-draft.outputs.release_name }}
           body: |
-            Merge this PR to create release ${{ needs.update-release-draft.outputs.release_name }}
+            Merge this PR to create release ${{ needs.update-release-draft.outputs.release_name }}.
 
-            This PR was created automatically by the release-pr workflow and
-            bumps the required versioned files.
+            This PR was created by the release-pr workflow.
           commit-message: "Release ${{ needs.update-release-draft.outputs.release_name }}"
           branch: maintenance/release-pr
           labels: pr-nochangelog

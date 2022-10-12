@@ -1,19 +1,25 @@
-name: Create Release
+# This workflow triggers a new Release if a release PR has just been merged
+# If you want to create a new release, use the release-pr workflow instead
+name: Trigger GitHub release
 
 on:
-  pull_request:
+  push:
     branches:
-      - maintenance/release-pr
-    types:
-      - closed
+      - main
 
 jobs:
   publish-release:
-    name: Create Release
-    if: github.event.pull_request.merged == true
+    name: Trigger release
     runs-on: ubuntu-latest
     steps:
-      - uses: release-drafter/release-drafter@v5
+      - name: Update and retrieve current release version
+        uses: release-drafter/release-drafter@v5
+        id: drafter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Trigger release if version matches latest commit message
+        if: github.event.head_commit.message == format('Release {0}', steps.drafter.outputs.release_name)
+        uses: release-drafter/release-drafter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
