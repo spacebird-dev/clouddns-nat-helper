@@ -68,7 +68,7 @@ def main():
     print(f"New chart appVersion: {chart_data['appVersion']}")
 
     if not args.dry_run:
-        with open((chart_name).joinpath("Chart.yaml"), encoding="utf-8") as f:
+        with open((chart_name).joinpath("Chart.yaml"), "w", encoding="utf-8") as f:
             yaml.dump(chart_data, f, allow_unicode=True)
         print("Saved Chart.yaml")
 
