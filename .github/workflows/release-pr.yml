@@ -52,7 +52,9 @@ jobs:
       - name: Install set-cargo-version crate
         run: cargo install set-cargo-version
       - name: Update cargo version
-        run: set-cargo-version ./Cargo.toml "${{ needs.update-release-draft.outputs.release_name }}"
+        run: |
+          set-cargo-version ./Cargo.toml "${{ needs.update-release-draft.outputs.release_name }}"
+          cargo update -w
 
       - name: Set up pip and install helm updater requirements
         working-directory: helm
@@ -69,6 +71,7 @@ jobs:
         with:
           add-paths: |
             Cargo.toml
+            Cargo.lock
             helm/charts/**/Chart.yaml
           title: Release ${{ needs.update-release-draft.outputs.release_name }}
           body: |
