@@ -8,9 +8,9 @@ ARG profile=debug
 ENV TARGET=${target}
 ENV PROFILE=${profile}
 
-COPY target/${target}/${PROFILE}/clouddns-nat-helper /app/
+COPY target/${target}/${PROFILE}/clouddns-nat-helper /bin
 
 # run unprivileged
 USER 1001
 
-CMD ["/app/clouddns-nat-helper"]
+CMD ["clouddns-nat-helper"]

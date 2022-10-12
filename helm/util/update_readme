@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+if [ -z "$1" ]; then
+    printf "Usage: update_readme <chart-directory>.\nExample: update_readme charts/my-chart\nRun from /helm directory\n"
+    exit 1
+fi
+
+frigate gen "$1" > "$1/README.md"

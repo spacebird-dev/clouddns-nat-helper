@@ -1,0 +1,5 @@
+# Tooling for keeping the helm-chart up-to-date
+semver
+frigate
+toml
+pyyaml
