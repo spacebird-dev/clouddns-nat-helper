@@ -17,8 +17,10 @@ jobs:
         id: drafter
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Show desired relese version
+        run: echo "${{ format('Release {0}', steps.drafter.outputs.release_name) }}"
       - name: Trigger release if version matches latest commit message
-        if: github.event.head_commit.message == format('Release {0}', steps.drafter.outputs.release_name)
+        if: startsWith(github.event.head_commit.message, format('Release {0}', steps.drafter.outputs.release_name))
         uses: release-drafter/release-drafter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
