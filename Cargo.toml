@@ -2,7 +2,7 @@
 name = "clouddns-nat-helper"
 version = "0.1.1"
 edition = "2021"
-description = "Autogenerate A records for NAT setups from AAA records in cloud providers"
+description = "Autogenerate A records for NAT setups from AAAA records in cloud providers"
 license-file = "LICENSE"
 repository = "https://github.com/maxhoesel/clouddns-nat-helper"
 keywords = ["dns", "cloud", "cloudflare", "nat", "ipv4"]
@@ -11,7 +11,12 @@ exclude = [
     ".github",
     "imgs",
     ".dockerignore",
-    "Dockerfile"
+    "Dockerfile",
+    "helm",
+    ".gitignore",
+    ".pre-commit-config.yaml",
+    "lcov.info",
+    "Makefile.toml",
 ]
 
 [dev-dependencies]
