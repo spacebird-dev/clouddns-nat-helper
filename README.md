@@ -106,7 +106,13 @@ CLOUDDNS_NAT_IPV4_HOSTNAME=maxhoesel.de
 ```
 ## In a kubernetes cluster
 
-TODO, there will be a helm chart
+There is a helm chart available for download  [here](https://github.com/maxhoesel/clouddns-nat-helper/tree/main/helm/charts/clouddns-nat-helper).
+
+Download your desired version (using the GitHub tag selection menu), then install is with the usual helm commands:
+
+`helm install my-helper --namespace my-helper --create-namespace --values values.yml ./charts/clouddns-nat-helper`
+
+A repository to install from may be created in the future.
 
 # Usage
 
