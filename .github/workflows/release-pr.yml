@@ -1,0 +1,82 @@
+---
+
+# This workflow automatically creates a PR that, when merged, will automatically
+# trigger the next release.
+#
+# The release PR bumps the version number in affected files, such as Cargo.toml, helm charts, pyproject.toml, etc.
+#
+# The actual release is published by the release-trigger.yml workflow, while artifacts are built by publish.yml
+name: Create Release PR
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  update-release-draft:
+    name: Update Release Draft
+    runs-on: ubuntu-latest
+    outputs:
+      release_name: ${{ steps.drafter.outputs.name }}
+    steps:
+      - uses: release-drafter/release-drafter@v5
+        id: drafter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+  release-pr:
+    name: Create release PR
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - update-release-draft
+    steps:
+      - name: Check out codebase
+        uses: actions/checkout@v3
+
+      - name: Setup rust
+        uses: actions-rs/toolchain@v1
+        with:
+          override: true
+          toolchain: stable
+      - name: Enable cargo caching
+        uses: Swatinem/rust-cache@v2
+      - name: Set up Python 3
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3"
+
+      - name: Install set-cargo-version crate
+        run: cargo install set-cargo-version
+      - name: Update cargo version
+        run: set-cargo-version ./Cargo.toml "${{ needs.update-release-draft.outputs.release_name }}"
+
+      - name: Set up pip and install helm updater requirements
+        working-directory: helm
+        run: |
+          sudo apt update
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Update helm chart version
+        run: util/bump_chart_version.py
+        working-directory: helm
+
+      - name: Open PR for collection version update
+        uses: peter-evans/create-pull-request@v4
+        with:
+          add-paths: |
+            Cargo.toml
+            helm/charts/**/Chart.yaml
+          title: Release ${{ needs.update-release-draft.outputs.release_name }}
+          body: |
+            Merge this PR to create release ${{ needs.update-release-draft.outputs.release_name }}
+
+            This PR was created automatically by the release-pr workflow and
+            bumps the required versioned files.
+          commit-message: "Release ${{ needs.update-release-draft.outputs.release_name }}"
+          branch: maintenance/release-pr
+          labels: pr-nochangelog
+          delete-branch: true
