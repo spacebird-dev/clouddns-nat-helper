@@ -193,7 +193,7 @@ For a release binary:
 
 `cargo make --profile release build`
 
-This project uses `cross` to cross-compile binaries for different target platforms.
+This project uses [`cross`](https://github.com/cross-rs/cross) to cross-compile binaries for different target platforms.
 You can create a binary for a different target like so:
 
 - Debug: `cargo make -e TARGET=aarch64-unknown-linux-gnu build`
