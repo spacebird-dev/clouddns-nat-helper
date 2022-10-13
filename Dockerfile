@@ -9,6 +9,7 @@ ENV TARGET=${target}
 ENV PROFILE=${profile}
 
 COPY target/${target}/${PROFILE}/clouddns-nat-helper /bin
+RUN chmod +x /bin/clouddns-nat-helper
 
 # run unprivileged
 USER 1001
