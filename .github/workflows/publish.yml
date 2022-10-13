@@ -122,6 +122,17 @@ jobs:
       - name: Check out codebase
         uses: actions/checkout@v3
 
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          target: "${{ matrix.target.name }}"
+          override: true
+          toolchain: stable
+      - name: Enable cargo caching
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "{{ matrix.target.name }}"
+
       # Needed for multi-platform images
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
