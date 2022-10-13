@@ -30,3 +30,6 @@ lcov.info
 
 # Python venvs
 .venv
+
+# Docker stuff
+binaries

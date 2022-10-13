@@ -1,0 +1,30 @@
+FROM debian:bullseye-slim as builder
+
+ARG TARGETPLATFORM
+ARG binary_dir
+ENV BINARY_DIR=${binary_dir}
+
+ARG binary_name
+ENV BINARY_NAME=${binary_name}
+
+COPY ${BINARY_DIR}/* /tmp/binaries/
+# Select the correct binary and put it to a predictable location
+RUN case ${TARGETPLATFORM} in \
+    "linux/amd64") export TARGET="amd64" ;; \
+    "linux/arm64") export TARGET="arm64" ;; \
+    esac; \
+    mv /tmp/binaries/${BINARY_NAME}_${TARGET} /root/${BINARY_NAME}
+
+
+FROM debian:bullseye-slim
+
+ARG binary_name
+ENV BINARY_NAME=${binary_name}
+
+COPY --from=builder /root/${BINARY_NAME} /usr/local/bin/
+RUN chmod +x /usr/local/bin/${BINARY_NAME}
+
+# run unprivileged
+USER 1001
+
+CMD ["${BINARY_NAME}"]

@@ -104,6 +104,9 @@ CLOUDDNS_NAT_CLOUDFLARE_API_TOKEN=abc123456789
 CLOUDDNS_NAT_SOURCE=hostname
 CLOUDDNS_NAT_IPV4_HOSTNAME=maxhoesel.de
 ```
+
+You can also create your own container by running: `docker build` in the root of this project.
+
 ## In a kubernetes cluster
 
 There is a helm chart available for download  [here](https://github.com/maxhoesel/clouddns-nat-helper/tree/main/helm/charts/clouddns-nat-helper).
@@ -191,18 +194,20 @@ To create a basic local build, just run:
 
 For a release binary:
 
-`cargo make --profile release build`
+`cargo make -p release build`
 
 This project uses [`cross`](https://github.com/cross-rs/cross) to cross-compile binaries for different target platforms.
 You can create a binary for a different target like so:
 
-- Debug: `cargo make -e TARGET=aarch64-unknown-linux-gnu build`
-- Release: `cargo make -e TARGET=aarch64-unknown-linux-gnu --profile release build`
+- Debug: `cargo make build-aarch64-unknown-linux-gnu`
+- Release: `cargo make -p release build-aarch64-unknown-linux-gnu`
+
+To see which targets are available, run `cargo make --list-category-steps build`
 
 ### Run Tests
 
 - Default (host) target: `cargo make test`
-- Custom target: `cargo make -e TARGET=aarch64-unknown-linux-gnu test`
+- Custom target: `cargo make test-aarch64-unknown-linux-gnu`
 - Get a coverage report: `cargo make coverage`
 
 ### Create docs
@@ -211,7 +216,17 @@ You can create a binary for a different target like so:
 
 ### Create Docker images
 
-- `cargo make docker`
-- Note: images will be saved with the tag `clouddns-nat-helper
-- This will create a docker image suitable for your local machine.
-We use [docker-buildx](https://docs.docker.com/build/building/multi-platform/) in the CI to generate multi-arch images
+This will create a docker image suitable for your local machine:
+
+`cargo make -e DOCKER_TAG=mytag docker`
+
+
+We use [docker-buildx](https://docs.docker.com/build/building/multi-platform/) in the CI to generate multi-arch images.
+To generate **and push** such an image locally, first install docker-buildx and ensure that the QEMU support is working.
+Then, create a builder using the docker-container driver and switch to it:
+
+`docker buildx create --name mybuilder --driver docker-container --bootstrap --use`
+
+Then, run:
+
+`cargo make -e DOCKER_TAG=user/repo:latest docker-multiarch`

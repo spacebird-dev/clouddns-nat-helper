@@ -32,9 +32,8 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
 
-  build-release-artifact:
+  build:
     name: Build ${{ matrix.target.name }}
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -61,7 +60,8 @@ jobs:
         with:
           key: "{{ matrix.target.name }}"
 
-      - uses: XAMPPRocky/get-github-release@v1
+      - name: Get cross
+        uses: XAMPPRocky/get-github-release@v1
         id: cross
         with:
           owner: cross-rs
@@ -77,8 +77,39 @@ jobs:
       - name: Build release binary
         run: cross build --release --target ${{ matrix.target.name }}
 
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}_${{ matrix.target.name }}
+          path: target/${{ matrix.target.name }}/release/${{ github.event.repository.name }}${{ matrix.target.extension }}
+
+  gh-release-artifacts:
+    name: Upload ${{ matrix.target }} to GH Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    strategy:
+      matrix:
+        target:
+          - name: aarch64-unknown-linux-gnu
+            extension: ""
+          - name: x86_64-unknown-linux-gnu
+            extension: ""
+          - name: x86_64-pc-windows-gnu
+            extension: ".exe"
+    steps:
+      - name: Check out codebase
+        uses: actions/checkout@v3
+
+      - name: Get target binary artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}_${{ matrix.target.name }}
+          path: /tmp/${{ github.event.repository.name }}_${{ matrix.target.name }}${{ matrix.target.extension }}
+
       - name: Create release asset archive
-        run: tar cvzf binary.tar.gz --directory=target/${{ matrix.target.name }}/release "${{ github.event.repository.name }}${{ matrix.target.extension }}"
+        run: tar cvzf binary.tar.gz --directory=/tmp ${{ github.event.repository.name }}_${{ matrix.target.name }}${{ matrix.target.extension }}
 
       - name: Get current GitHub release
         id: get_release
@@ -98,28 +129,30 @@ jobs:
           asset_content_type: application/tar+gzip
 
   docker:
-    name: "Publish Docker images"
+    name: "Publish Docker image"
     runs-on: ubuntu-latest
+    needs:
+      - build
     steps:
       - name: Check out codebase
         uses: actions/checkout@v3
 
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          target: "${{ matrix.target.name }}"
-          override: true
-          toolchain: stable
-      - name: Enable cargo caching
-        uses: Swatinem/rust-cache@v2
-        with:
-          key: "{{ matrix.target.name }}"
-
-      # Needed for multi-platform images
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+
+
+      - name: Create binaries folder
+        run: mkdir binaries
+      - name: Get amd64 artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}_x86_64-unknown-linux-gnu
+          path: binaries/${{ github.event.repository.name }}_amd64
+      - name: Get arm64 artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}_aarch64-unknown-linux-gnu
+          path: binaries/${{ github.event.repository.name }}_arm64
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -155,7 +188,6 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v')}}
             type=semver,pattern={{major}},enable=${{ startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/v0.') }}
             latest
-
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
@@ -163,3 +195,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.tags.outputs.tags }}
           push: true
+          file: Dockerfile.multiarch
+          build-args: |
+            binary_dir=binaries
+            binary_name=${{ github.event.repository.name }}

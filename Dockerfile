@@ -1,6 +1,7 @@
 FROM rust:1.64 as builder
 
-WORKDIR /usr/src/app
+WORKDIR /usr/local/src
+
 COPY . .
 
 RUN cargo install --path .
@@ -8,6 +9,7 @@ RUN cargo install --path .
 FROM debian:bullseye-slim
 
 COPY --from=builder /usr/local/cargo/bin/clouddns-nat-helper /usr/local/bin/clouddns-nat-helper
+RUN chmod +x /usr/local/bin/clouddns-nat-helper
 
 # run unprivileged
 USER 1001
