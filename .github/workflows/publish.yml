@@ -163,8 +163,6 @@ jobs:
         id: tags
         uses: docker/metadata-action@v4
         with:
-          flavor: |
-            latest=true
           images: |
             ${{ github.repository }}
             ghcr.io/${{ github.repository }}
@@ -173,6 +171,7 @@ jobs:
             type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v')}}
             type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v')}}
             type=semver,pattern={{major}},enable=${{ startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/v0.') }}
+            latest
 
       - name: Build and push
         uses: docker/build-push-action@v3
