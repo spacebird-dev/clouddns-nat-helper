@@ -87,11 +87,11 @@ Docker images are automatically built and pushed to the following registries:
 - [Quay.io](https://quay.io/maxhoesel/clouddns-nat-helper)
 
 Notes:
+- It is recommended that you use a versioned tag (such as `:0.2`) to ensure that no breaking changes occur
 - The `latest` tag points to this repositories master branch and **may break at any time**.
-- Supported architectures: `amd64` (default), `arm64` (use tags with the `-arm64` suffix)
+- Supported architectures: `amd64`,`arm64`. The images are multi-arch images, so there is no need to specify a arch tag
 
 To pass arguments to the image, use environment variables or an environment file:
-
 
 ```
 $ docker run --env-file ./.env maxhoesel/clouddns-nat-helper:0.1
