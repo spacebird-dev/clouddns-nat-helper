@@ -137,10 +137,7 @@ impl ARegistry for TxtRegistry<'_> {
                 Ok(())
             }
             Ownership::Taken => Err(RegistryError {
-                msg: format!(
-                    "Domain {} already has A records and no ownership record",
-                    name
-                ),
+                msg: format!("Domain {} is already owned by other instance", name),
             }),
             Ownership::Available => {
                 self.provider

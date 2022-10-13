@@ -48,7 +48,9 @@ spec:
             # Provider configuration
             - --provider={{- .Values.provider }}
             {{- if eq .Values.provider "cloudflare"  }}
-            - --cloudflare-proxied={{ .Values.cloudflare.proxied }}
+            {{- if .Values.cloudflare.proxied }}
+            - --cloudflare-proxied
+            {{- end }}
             {{- end  }}
             # Misc settings
             {{- if .Values.registry.tenant  }}
