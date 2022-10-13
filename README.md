@@ -185,19 +185,23 @@ You can use either `cargo make` or `makers` to run the commands below.
 
 ### Create a build
 
-#### Default target
+To create a basic local build, just run:
 
-- Debug: `cargo make build`
-- Release: `cargo make --profile release build`
+`cargo make build`
 
-#### Custom target
+For a release binary:
+
+`cargo make --profile release build`
+
+This project uses `cross` to cross-compile binaries for different target platforms.
+You can create a binary for a different target like so:
 
 - Debug: `cargo make -e TARGET=aarch64-unknown-linux-gnu build`
 - Release: `cargo make -e TARGET=aarch64-unknown-linux-gnu --profile release build`
 
 ### Run Tests
 
-- Default target: `cargo make test`
+- Default (host) target: `cargo make test`
 - Custom target: `cargo make -e TARGET=aarch64-unknown-linux-gnu test`
 - Get a coverage report: `cargo make coverage`
 
@@ -207,16 +211,7 @@ You can use either `cargo make` or `makers` to run the commands below.
 
 ### Create Docker images
 
-Note: images will be saved with the tag `clouddns-nat-helper:<development/release>`
-
-#### Default target
-
-- Debug: `cargo make docker`
-- Release: `cargo make --profile release docker`
-
-#### Custom target
-
-Note: Set DOCKER_ARCH to one of the [officially supported `debian` image architectures](https://hub.docker.com/_/debian)
-
-- Debug: `cargo make -e TARGET=aarch64-unknown-linux-gnu -e DOCKER_ARCH=arm64v8 docker`
-- Release: `cargo make --profile release -e TARGET=aarch64-unknown-linux-gnu -e DOCKER_ARCH=arm64v8 docker`
+- `cargo make docker`
+- Note: images will be saved with the tag `clouddns-nat-helper
+- This will create a docker image suitable for your local machine.
+We use [docker-buildx](https://docs.docker.com/build/building/multi-platform/) in the CI to generate multi-arch images

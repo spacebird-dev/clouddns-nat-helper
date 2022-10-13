@@ -1,15 +1,13 @@
-ARG arch=amd64
+FROM rust:1.64 as builder
 
-FROM ${arch}/debian:bullseye-slim
+WORKDIR /usr/src/app
+COPY . .
 
-ARG target=x86_64-unknown-linux-gnu
-ARG profile=debug
+RUN cargo install --path .
 
-ENV TARGET=${target}
-ENV PROFILE=${profile}
+FROM debian:bullseye-slim
 
-COPY target/${target}/${PROFILE}/clouddns-nat-helper /bin
-RUN chmod +x /bin/clouddns-nat-helper
+COPY --from=builder /usr/local/cargo/bin/clouddns-nat-helper /usr/local/bin/clouddns-nat-helper
 
 # run unprivileged
 USER 1001

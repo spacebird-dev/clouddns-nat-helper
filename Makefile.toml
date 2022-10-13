@@ -113,59 +113,14 @@ dependencies = ["install-cross"]
 command = "cross"
 args = ["test", "--all-features"]
 
-
-# DOCKER
 [tasks.docker]
-description = "Build a docker image"
-dependencies = [
-    "docker-development-default",
-    "docker-development-target",
-    "docker-release-default",
-    "docker-release-target"
-]
-[tasks.docker-development-default]
-private = true
-condition = { env_not_set = ["TARGET"], profiles = ["development"]}
-dependencies = [ "build-development-default" ]
+description = "Build a local docker image"
 command = "docker"
 args = [
-    "build", "-t", "${CARGO_MAKE_PROJECT_NAME}:${CARGO_MAKE_PROFILE}", ".",
-    "--build-arg", "target=${CARGO_MAKE_RUST_TARGET_TRIPLE}",
-    "--build-arg", "profile=debug",
-    "--build-arg", "arch=amd64",
-]
-[tasks.docker-development-target]
-private = true
-condition = { env_true = ["TARGET"], profiles = ["development"]}
-dependencies = [ "build-development-target" ]
-command = "docker"
-args = [
-    "build", "-t", "${CARGO_MAKE_PROJECT_NAME}:${CARGO_MAKE_PROFILE}", ".",
-    "--build-arg", "target=${TARGET}",
-    "--build-arg", "profile=debug",
-    "--build-arg", "arch=${DOCKER_ARCH}",
-]
-[tasks.docker-release-default]
-private = true
-condition = { env_not_set = ["TARGET"], profiles = ["release"]}
-dependencies = [ "build-release-default" ]
-command = "docker"
-args = [
-    "build", "-t", "${CARGO_MAKE_PROJECT_NAME}:${CARGO_MAKE_PROFILE}", ".",
-    "--build-arg", "target=${CARGO_MAKE_RUST_TARGET_TRIPLE}",
-    "--build-arg", "profile=release",
-    "--build-arg", "arch=amd64",
-]
-[tasks.docker-release-target]
-private = true
-condition = { env_true = ["TARGET"], profiles = ["release"]}
-dependencies = [ "build-release-target" ]
-command = "docker"
-args = [
-    "build", "-t", "${CARGO_MAKE_PROJECT_NAME}:${CARGO_MAKE_PROFILE}", ".",
-    "--build-arg", "target=${TARGET}",
-    "--build-arg", "profile=release",
-    "--build-arg", "arch=${DOCKER_ARCH}",
+    "build",
+    "-t",
+    "${CARGO_MAKE_PROJECT_NAME}",
+    "."
 ]
 
 [tasks.docs]
