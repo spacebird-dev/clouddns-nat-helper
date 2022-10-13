@@ -147,12 +147,17 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ github.event.repository.name }}_x86_64-unknown-linux-gnu
-          path: binaries/${{ github.event.repository.name }}_amd64
+          path: tmp/bin_amd64
+      - name: Move binary from artifact
+        run: mv tmp/bin_amd64/clouddns-nat-helper binaries/clouddns-nat-helper_amd64
       - name: Get arm64 artifact
         uses: actions/download-artifact@v3
         with:
           name: ${{ github.event.repository.name }}_aarch64-unknown-linux-gnu
-          path: binaries/${{ github.event.repository.name }}_arm64
+          path: tmp/bin_arm64
+      - name: Move binary from artifact
+        run: mv tmp/bin_arm64/clouddns-nat-helper binaries/clouddns-nat-helper_arm64
+
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
