@@ -14,3 +14,8 @@ updates:
     directory: "/helm/util"
     schedule:
       interval: "monthly"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
