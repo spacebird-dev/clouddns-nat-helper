@@ -70,8 +70,6 @@ Providers, Registries and Ipv4Sources use pluggable interfaces, so adding new on
 
 You can download linux binaries from the [releases page](https://github.com/maxhoesel/clouddns-nat-helper/releases).
 
-Note that only the `x86_64-unknown-linux-gnu` target is tested thoroughly, the other binaries should work as well however.
-
 ## With Cargo
 
 If you have `cargo` installed, simply run
