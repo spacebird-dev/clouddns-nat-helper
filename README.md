@@ -5,7 +5,7 @@
 
 # clouddns-nat-helper
 
-A utility to automatically generate A records for hosts behind a NAT from AAAA records in a DNS zone.
+A utility to automatically generate `A` DNS records for hosts behind a NAT based on existing AAAA records in a DNS zone.
 
 ## What? Who in their right mind would need this?
 
