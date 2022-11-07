@@ -12,7 +12,7 @@ jobs:
   publish-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
-    if: startsWith(github.event.head_commit.message, "Release ")
+    if: startsWith(github.event.head_commit.message, 'Release ')
     steps:
       - name: Update and retrieve current draft release version
         uses: release-drafter/release-drafter@v5
