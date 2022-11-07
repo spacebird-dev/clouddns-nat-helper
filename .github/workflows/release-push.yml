@@ -7,16 +7,20 @@ on:
     branches:
       - main
 
+
 jobs:
   publish-release:
-    name: Push release (or draft)
+    name: Publish GitHub Release
     runs-on: ubuntu-latest
+    if: startsWith(github.event.head_commit.message, "Release ")
     steps:
       - name: Update and retrieve current draft release version
         uses: release-drafter/release-drafter@v5
         id: drafter
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          publish: false # we are only getting the version, don't create a draft
       - name: Save desired version string
         run: |
           echo "DESIRED_VER=Release ${{ steps.drafter.outputs.name }}" >> $GITHUB_ENV
