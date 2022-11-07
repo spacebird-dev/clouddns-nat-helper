@@ -7,7 +7,7 @@ use clap::Parser;
 
 use env_logger::Builder;
 use itertools::Itertools;
-use log::{error, info, trace};
+use log::{debug, error, info, trace};
 use tokio::{
     task::{self},
     time::{sleep, Duration},
@@ -107,7 +107,7 @@ fn run_job(cli: Cli) -> Result<(), ()> {
 
     let source = match get_source(&cli) {
         Ok(s) => {
-            info!("Created IPv4 source");
+            debug!("Created IPv4 source");
             s
         }
         Err(e) => {
@@ -117,7 +117,10 @@ fn run_job(cli: Cli) -> Result<(), ()> {
     };
 
     let mut registry = match TxtRegistry::from_provider(cli.registry_tenant, provider.as_ref()) {
-        Ok(r) => r,
+        Ok(r) => {
+            debug!("Created TXT Registry");
+            r
+        }
         Err(e) => {
             error!("COuld not create registry: {}", e);
             return Err(());
@@ -126,7 +129,10 @@ fn run_job(cli: Cli) -> Result<(), ()> {
     info!("Initialized registry");
 
     let target_addr = match source.addr().map_err(|e| e.to_string()) {
-        Ok(a) => a,
+        Ok(a) => {
+            info!("Target Ipv4 address: {}", a);
+            a
+        }
         Err(e) => {
             error!("Could not retrieve target IPv4 address: {}", e);
             return Err(());
