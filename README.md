@@ -228,3 +228,8 @@ Then, create a builder using the docker-container driver and switch to it:
 Then, run:
 
 `cargo make -e DOCKER_TAG=user/repo:latest docker-multiarch`
+
+# Release Management
+
+To create a new release, run the "Create Release PR" Action. This will generate a PR that you can then review and merge.
+From there, the CI will automatically publish artifacts, etc.
