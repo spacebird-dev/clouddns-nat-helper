@@ -1,9 +1,9 @@
 apiVersion: v2
-appVersion: 0.2.6
+appVersion: 0.2.8
 description: Autogenerate A records for NAT setups from AAAA records in cloud providers
 home: https://github.com/maxhoesel/clouddns-nat-helper
 name: clouddns-nat-helper
 sources:
 - https://github.com/maxhoesel/clouddns-nat-helper
 type: application
-version: 0.2.6
+version: 0.2.7
