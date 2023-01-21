@@ -208,8 +208,8 @@ mod tests {
             original_name_servers: None,
             original_registrar: None,
             owner: endpoints::zone::Owner::User {
-                id: "abc123".to_string(),
-                email: "fakeuser@example.com".to_string(),
+                id: Some("abc123".to_string()),
+                email: Some("fakeuser@example.com".to_string()),
             },
             paused: false,
             permissions: vec![],
