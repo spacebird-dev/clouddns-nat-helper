@@ -352,7 +352,7 @@ dependencies = [
 [[package]]
 name = "cloudflare"
 version = "0.10.1"
-source = "git+https://github.com/maxhoesel/cloudflare-rs#4581c166c54444047156336992574a6370f4fd95"
+source = "git+https://github.com/maxhoesel/cloudflare-rs#ee0a23796b2b1f31310e4a9164ac62515f8a1823"
 dependencies = [
  "anyhow",
  "async-trait",
