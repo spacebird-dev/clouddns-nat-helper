@@ -8,6 +8,7 @@
 mod fixed;
 mod hostname;
 
+// Export our concrete sources
 pub use fixed::FixedSource;
 pub use hostname::{HostnameSource, HostnameSourceConfig};
 

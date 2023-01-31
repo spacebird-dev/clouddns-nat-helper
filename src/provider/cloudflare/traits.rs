@@ -3,13 +3,8 @@ use cloudflare::{endpoints, framework::response::ApiFailure};
 use crate::provider::{DnsRecord, ProviderError, RecordContent};
 
 impl From<ApiFailure> for ProviderError {
-    fn from(f: ApiFailure) -> Self {
-        match f {
-            ApiFailure::Error(s, errs) => ProviderError {
-                msg: format!("[{}] {:?}", s, errs.errors),
-            },
-            ApiFailure::Invalid(e) => ProviderError { msg: e.to_string() },
-        }
+    fn from(e: ApiFailure) -> Self {
+        ProviderError::Internal(e.to_string())
     }
 }
 

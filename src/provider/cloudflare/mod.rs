@@ -4,8 +4,8 @@ mod wrapper;
 use log::{debug, trace};
 use mockall_double::double;
 
-use super::{DnsRecord, Provider, ProviderError};
-use crate::{config::TTL, plan::Plan};
+use super::{DnsProvider, DnsRecord, Provider, ProviderError, TxTRegistryProvider};
+use crate::{provider::RecordContent, provider::TTL};
 
 #[double]
 use wrapper::CloudflareWrapper;
@@ -34,15 +34,15 @@ impl CloudflareProvider {
     #[cfg(not(test))]
     pub fn from_config(
         config: &CloudflareProviderConfig,
-    ) -> Result<Box<dyn Provider>, ProviderError> {
+    ) -> Result<CloudflareProvider, ProviderError> {
         let api = CloudflareWrapper::try_new(config.api_token)?;
 
-        Ok(Box::new(CloudflareProvider {
+        Ok(CloudflareProvider {
             api,
             ttl: None,
             proxied: config.proxied,
             dry_run: false,
-        }))
+        })
     }
 
     #[cfg(test)]
@@ -50,46 +50,44 @@ impl CloudflareProvider {
     fn from_mock_wrapper(
         config: &CloudflareProviderConfig,
         wrapper: CloudflareWrapper,
-    ) -> Box<dyn Provider> {
-        Box::new(CloudflareProvider {
+    ) -> CloudflareProvider {
+        CloudflareProvider {
             api: wrapper,
             ttl: None,
             proxied: config.proxied,
             dry_run: false,
-        })
+        }
     }
 
-    fn create_record(&self, rec: DnsRecord) -> Result<(), ProviderError> {
+    fn create_record(&self, rec: &DnsRecord) -> Result<(), ProviderError> {
         let zone_id = &self
             .api
-            .find_record_zone(&rec)
+            .find_record_zone(rec)
             .ok_or(format!("Could not find suitable zone for record {}", rec))?
             .id;
 
         if !self.dry_run {
-            self.api
-                .create_record(
-                    zone_id,
-                    &rec.domain_name,
-                    &self.ttl,
-                    &self.proxied,
-                    rec.content.to_owned().into(),
-                )
-                .map_err(|e| ProviderError { msg: e.to_string() })?;
+            self.api.create_record(
+                zone_id,
+                &rec.domain_name,
+                &self.ttl,
+                &self.proxied,
+                rec.content.to_owned().into(),
+            )?;
         }
         debug!("Created record {} in zone {}", rec, zone_id);
         Ok(())
     }
 
-    fn delete_record(&self, rec: DnsRecord) -> Result<(), ProviderError> {
+    fn delete_record(&self, rec: &DnsRecord) -> Result<(), ProviderError> {
         let zone_id = &self
             .api
-            .find_record_zone(&rec)
+            .find_record_zone(rec)
             .ok_or(format!("Could not find suitable zone for record {}", rec))?
             .id;
         let record_id = &self
             .api
-            .find_record_endpoint(&rec)
+            .find_record_endpoint(rec)
             .ok_or(format!(
                 "Could not find matching record id for record {}",
                 rec
@@ -97,9 +95,7 @@ impl CloudflareProvider {
             .id;
 
         if !self.dry_run {
-            self.api
-                .delete_record(zone_id, record_id)
-                .map_err(|e| ProviderError { msg: e.to_string() })?;
+            self.api.delete_record(zone_id, record_id)?;
         }
         debug!(
             "Deleted record {} with id {} from zone {}",
@@ -109,7 +105,7 @@ impl CloudflareProvider {
     }
 }
 
-impl Provider for CloudflareProvider {
+impl DnsProvider for CloudflareProvider {
     fn records(&self) -> Result<Vec<DnsRecord>, ProviderError> {
         debug!("Reading zones from Cloudflare API");
         let zones = self.api.list_zones()?.result;
@@ -127,28 +123,6 @@ impl Provider for CloudflareProvider {
         Ok(records)
     }
 
-    fn apply_plan(&self, plan: Plan) -> Vec<Result<(), ProviderError>> {
-        let mut results: Vec<Result<(), ProviderError>> = Vec::new();
-
-        for rec in plan.create_actions {
-            results.push(self.create_record(rec));
-        }
-        debug!("All create actions performed");
-        for rec in plan.delete_actions {
-            results.push(self.delete_record(rec));
-        }
-        debug!("All delete actions performed");
-        results
-    }
-
-    fn supports_dry_run(&self) -> bool {
-        true
-    }
-
-    fn set_dry_run(&mut self, dry_run: bool) {
-        self.dry_run = dry_run;
-    }
-
     fn ttl(&self) -> Option<TTL> {
         self.ttl
     }
@@ -157,20 +131,68 @@ impl Provider for CloudflareProvider {
         self.ttl = Some(ttl);
     }
 
+    fn enable_dry_run(&mut self) -> Result<(), ProviderError> {
+        self.dry_run = true;
+        Ok(())
+    }
+
+    fn dry_run(&self) -> bool {
+        self.dry_run
+    }
+
+    fn apply(&self, action: &crate::plan::Action) -> Result<(), ProviderError> {
+        let current_records = match self.records() {
+            Ok(current) => current,
+            Err(e) => return Err(e),
+        };
+
+        match action {
+            crate::plan::Action::ClaimAndUpdate(domain, ip) => self.create_record(&DnsRecord {
+                domain_name: domain.clone(),
+                content: RecordContent::A(*ip),
+            }),
+            crate::plan::Action::Update(domain, ip) => {
+                // Delete old A records first
+                for r in current_records.iter().filter(|r| match r.content {
+                    RecordContent::A(_) => r.domain_name == *domain,
+                    _ => false,
+                }) {
+                    self.delete_record(r)?;
+                }
+                self.create_record(&DnsRecord {
+                    domain_name: domain.clone(),
+                    content: RecordContent::A(*ip),
+                })
+            }
+            crate::plan::Action::DeleteAndRelease(domain) => {
+                for r in current_records.iter().filter(|r| match r.content {
+                    RecordContent::A(_) => r.domain_name == *domain,
+                    _ => false,
+                }) {
+                    self.delete_record(r)?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl TxTRegistryProvider for CloudflareProvider {
     fn create_txt_record(&self, domain: String, content: String) -> Result<(), ProviderError> {
-        self.create_record(DnsRecord {
+        self.create_record(&DnsRecord {
             domain_name: domain,
             content: super::RecordContent::Txt(content),
         })
     }
 
     fn delete_txt_record(&self, domain: String, content: String) -> Result<(), ProviderError> {
-        self.delete_record(DnsRecord {
+        self.delete_record(&DnsRecord {
             domain_name: domain,
             content: super::RecordContent::Txt(content),
         })
     }
 }
+impl Provider for CloudflareProvider {}
 
 #[cfg(test)]
 mod tests {
@@ -243,12 +265,9 @@ mod tests {
     fn should_support_dry_run() {
         // We intentionally do not expect create/delete_record to be called. If those are called in dry_run mode we fucked up
         let mut mock = CloudflareWrapper::default();
-        mock.expect_find_record_zone()
-            .times(3)
-            .returning(|_| Some(zone()));
-        // this is the record returned for apply_plans delete entry
+        mock.expect_find_record_zone().returning(|_| Some(zone()));
         mock.expect_find_record_endpoint()
-            .return_once(|_| Some(endpoint()));
+            .returning(|_| Some(endpoint()));
 
         let mut p = CloudflareProvider::from_mock_wrapper(
             &super::CloudflareProviderConfig {
@@ -257,20 +276,11 @@ mod tests {
             },
             mock,
         );
-        p.set_dry_run(true);
+        p.enable_dry_run().unwrap();
         p.create_txt_record("domain.example.org".to_string(), "hello".to_string())
             .unwrap();
-        let r = p.apply_plan(Plan {
-            create_actions: vec![DnsRecord {
-                domain_name: "domain.example.org".to_string(),
-                content: crate::provider::RecordContent::A(Ipv4Addr::new(10, 1, 1, 1)),
-            }],
-            delete_actions: vec![DnsRecord {
-                domain_name: "domain2.example.org".to_string(),
-                content: crate::provider::RecordContent::A(Ipv4Addr::new(10, 1, 1, 2)),
-            }],
-        });
-        r.into_iter().for_each(|r| r.unwrap());
+        p.delete_txt_record("domain.example.org".to_string(), "hello".to_string())
+            .unwrap();
     }
 
     #[test]

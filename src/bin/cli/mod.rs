@@ -1,8 +1,8 @@
-use std::net::Ipv4Addr;
+#![allow(non_camel_case_types)]
 
 use clap::Parser;
-
-use clouddns_nat_helper::config::{Ipv4AddressSource, Loglevel, Policy, Provider, TTL};
+use clouddns_nat_helper::provider::TTL;
+use std::net::Ipv4Addr;
 
 macro_rules! env_prefix {
     () => {
@@ -104,7 +104,8 @@ pub struct Cli {
         long,
         required_if_eq("source", "fixed"),
         value_name = "IPV4_ADDRESS",
-        env = concat!(env_prefix!(), "IPV4_FIXED_ADDRESS")
+        env = concat!(env_prefix!(), "IPV4_FIXED_ADDRESS"),
+        conflicts_with = "ipv4_hostname"
     )]
     pub ipv4_fixed_address: Option<Ipv4Addr>,
 
@@ -114,7 +115,8 @@ pub struct Cli {
         long,
         required_if_eq("source", "hostname"),
         value_name = "HOSTNAME",
-        env = concat!(env_prefix!(), "IPV4_HOSTNAME")
+        env = concat!(env_prefix!(), "IPV4_HOSTNAME"),
+        conflicts_with = "ipv4_fixed_address"
     )]
     pub ipv4_hostname: Option<String>,
 
@@ -126,6 +128,7 @@ pub struct Cli {
         use_value_delimiter = true,
         value_delimiter = ',',
         default_values=["8.8.8.8", "1.1.1.1"],
+        conflicts_with = "ipv4_fixed_address",
         env = concat!(env_prefix!(), "IPV4_HOSTNAME_DNS_SERVERS")
     )]
     pub ipv4_hostname_dns_servers: Vec<Ipv4Addr>,
@@ -138,4 +141,59 @@ pub struct Cli {
         env = concat!(env_prefix!(), "REGISTRY_TENANT")
     )]
     pub registry_tenant: String,
+}
+
+use clap::ValueEnum;
+use log::LevelFilter;
+
+/// Which source to use for our Ipv4 address
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, ValueEnum)]
+pub enum Ipv4AddressSource {
+    Hostname,
+    Fixed,
+}
+
+/// Used to set the applications loglevel
+// This is essentially a re-creation of log:Level. However, that enum doesn't derive ValueEnum, so we have to do it manually here
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, ValueEnum)]
+pub enum Loglevel {
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+impl From<Loglevel> for LevelFilter {
+    fn from(ll: Loglevel) -> Self {
+        match ll {
+            Loglevel::Error => LevelFilter::Error,
+            Loglevel::Warn => LevelFilter::Warn,
+            Loglevel::Info => LevelFilter::Info,
+            Loglevel::Debug => LevelFilter::Debug,
+            Loglevel::Trace => LevelFilter::Trace,
+        }
+    }
+}
+
+/// What actions to allow
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, ValueEnum)]
+pub enum Policy {
+    CreateOnly,
+    Upsert,
+    Sync,
+}
+impl From<Policy> for clouddns_nat_helper::plan::Policy {
+    fn from(value: Policy) -> Self {
+        match value {
+            Policy::CreateOnly => clouddns_nat_helper::plan::Policy::CreateOnly,
+            Policy::Upsert => clouddns_nat_helper::plan::Policy::Upsert,
+            Policy::Sync => clouddns_nat_helper::plan::Policy::Sync,
+        }
+    }
+}
+
+/// Which dns provider to use. Currently only contains Cloudflare
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, ValueEnum)]
+pub enum Provider {
+    Cloudflare,
 }

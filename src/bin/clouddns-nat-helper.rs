@@ -1,4 +1,5 @@
 mod cli;
+mod executor;
 
 use core::panic;
 use std::net::{IpAddr, SocketAddr};
@@ -14,14 +15,13 @@ use tokio::{
 };
 
 use clouddns_nat_helper::{
-    config,
     ipv4source::{self, Ipv4Source, SourceError},
-    plan::Plan,
     provider::{self, Provider, ProviderError},
-    registry::TxtRegistry,
+    registry::{ARegistry, RegistryError, TxtRegistry},
 };
 
 use cli::Cli;
+use executor::Executor;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), String> {
@@ -54,7 +54,7 @@ async fn main() -> Result<(), String> {
 
 fn get_source(cli: &Cli) -> Result<Box<dyn Ipv4Source>, SourceError> {
     match cli.source {
-        clouddns_nat_helper::config::Ipv4AddressSource::Hostname => {
+        cli::Ipv4AddressSource::Hostname => {
             ipv4source::HostnameSource::from_config(&ipv4source::HostnameSourceConfig {
                 hostname: cli.ipv4_hostname.to_owned().unwrap(),
                 servers: cli
@@ -64,21 +64,32 @@ fn get_source(cli: &Cli) -> Result<Box<dyn Ipv4Source>, SourceError> {
                     .collect_vec(),
             })
         }
-        clouddns_nat_helper::config::Ipv4AddressSource::Fixed => Ok(
-            ipv4source::FixedSource::from_addr(cli.ipv4_fixed_address.unwrap()),
-        ),
+        cli::Ipv4AddressSource::Fixed => Ok(ipv4source::FixedSource::from_addr(
+            cli.ipv4_fixed_address.unwrap(),
+        )),
     }
 }
 
 fn get_provider(cli: &Cli) -> Result<Box<dyn Provider>, ProviderError> {
     match cli.provider {
-        config::Provider::Cloudflare => {
-            provider::CloudflareProvider::from_config(&provider::CloudflareProviderConfig {
+        cli::Provider::Cloudflare => {
+            match provider::CloudflareProvider::from_config(&provider::CloudflareProviderConfig {
                 api_token: cli.cloudflare_api_token.to_owned().unwrap().as_str(),
                 proxied: Some(cli.cloudflare_proxied),
-            })
+            }) {
+                Ok(p) => Ok(Box::new(p)),
+                Err(e) => Err(e),
+            }
         }
     }
+}
+
+fn get_registry<'a>(
+    cli: &Cli,
+    provider: &'a (dyn clouddns_nat_helper::provider::Provider + 'a),
+) -> Result<Box<dyn ARegistry + 'a>, RegistryError> {
+    // For now, there is only a single registry and that is TXT. in the future, we could match here
+    TxtRegistry::from_provider(cli.registry_tenant.to_owned(), provider)
 }
 
 fn run_job(cli: Cli) -> Result<(), ()> {
@@ -93,16 +104,23 @@ fn run_job(cli: Cli) -> Result<(), ()> {
             return Err(());
         }
     };
-    if cli.dry_run {
-        if provider.supports_dry_run() {
-            provider.set_dry_run(cli.dry_run);
-            info!("Running in dry-run mode, no changes to the DNS provider will be made");
-        } else {
-            panic!("Selected provider does not support dry-run");
-        }
-    }
     if cli.record_ttl.is_some() {
         provider.set_ttl(cli.record_ttl.unwrap());
+    }
+
+    // Create a second provider for our TXT registry. TODO: ugly, should be able to reuse the previous provider if its TXTRegistry
+    let mut reg_provider = match get_provider(&cli) {
+        Ok(p) => {
+            info!("Connected to provider");
+            p
+        }
+        Err(e) => {
+            error!("Unable to create provider: {}", e.to_string());
+            return Err(());
+        }
+    };
+    if cli.record_ttl.is_some() {
+        reg_provider.set_ttl(cli.record_ttl.unwrap());
     }
 
     let source = match get_source(&cli) {
@@ -116,74 +134,73 @@ fn run_job(cli: Cli) -> Result<(), ()> {
         }
     };
 
-    let mut registry = match TxtRegistry::from_provider(cli.registry_tenant, provider.as_ref()) {
+    let mut registry = match get_registry(&cli, provider.as_ref()) {
         Ok(r) => {
             debug!("Created TXT Registry");
             r
         }
         Err(e) => {
-            error!("COuld not create registry: {}", e);
+            error!("Could not create registry: {}", e);
             return Err(());
         }
     };
     info!("Initialized registry");
 
-    let target_addr = match source.addr().map_err(|e| e.to_string()) {
-        Ok(a) => {
-            info!("Target Ipv4 address: {}", a);
-            a
-        }
+    let mut exec = match Executor::try_new(
+        source.as_ref(),
+        reg_provider.as_mut(),
+        registry.as_mut(),
+        cli.policy,
+        cli.dry_run,
+    ) {
+        Ok(e) => e,
         Err(e) => {
-            error!("Could not retrieve target IPv4 address: {}", e);
+            error!("Could not create executor: {}", e);
+            return Err(());
+        }
+    };
+    debug!("Initialized Executor");
+
+    let res = match exec.run() {
+        Ok(r) => r,
+        Err(e) => {
+            error!("Error during execution: {}", e);
             return Err(());
         }
     };
 
-    // Calculate our plan that we will apply. This also registers domain where possible
-    info!("Generating plan and registering domains...");
-    let plan = Plan::generate(registry.as_mut(), &target_addr, &cli.policy);
-    info!("Plan generated");
-    info!("Creating the following records: {:?}", plan.create_actions);
-    info!("Deleting the following records: {:?}", plan.delete_actions);
-
-    // Plan is consumed when applying, save the stuff we need to delete for later
-    let to_delete = plan.delete_actions.clone();
-
-    if plan.create_actions.is_empty() && plan.delete_actions.is_empty() {
-        info!("Nothing to do");
+    if res.successes.is_empty() && res.failures.is_empty() {
+        info!("No changes made");
         return Ok(());
     }
 
-    info!("Applying plan");
-    let results = provider.apply_plan(plan);
-    let errs = results.iter().filter(|r| r.is_err()).collect_vec();
-
-    if errs.is_empty() {
-        info!("Plan applied. No errors were encountered");
-    } else {
-        error!(
-            "The following errors were encountered while appling changes: {:?}",
-            errs
-        );
-        return Err(());
-    }
-
-    if !to_delete.is_empty() {
-        info!("Releasing claims on deleted records");
-        let mut release_errs = "Unable to release claims on the following domains: ".to_string();
-        for r in to_delete {
-            match registry.release(r.domain_name.as_str()) {
-                Ok(_) => {}
-                Err(e) => {
-                    error!("{}", e.to_string());
-                    release_errs += r.domain_name.as_str();
-                }
-            }
+    match (res.successes.len(), res.failures.len()) {
+        (0, 0) => info!("No changes made"),
+        (1.., 0) => {
+            info!(
+                "Successfully applied the following changes: {:?}",
+                res.successes
+            );
+            info!("No errors were encountered");
         }
-    } else {
-        info!("No claims to release");
+        (0, 1..) => {
+            info!(
+                "Encountered Errors while applying the following changes: {:?}",
+                res.failures
+            );
+        }
+        (1.., 1..) => {
+            info!(
+                "Successfully applied the following changes: {:?}",
+                res.successes
+            );
+            info!(
+                "Encountered Errors while applying the following changes: {:?}",
+                res.failures
+            );
+        }
+        (_, _) => unreachable!(),
     }
 
-    info!("Completed");
     Ok(())
 }
