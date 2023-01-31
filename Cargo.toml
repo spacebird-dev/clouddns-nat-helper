@@ -29,13 +29,13 @@ totems = "0.2.7"
 clap = { version = "4.0.32", features = ["derive", "env"] }
 cloudflare = { version = "0.10.1", features = ["rustls-tls"], default-features = false}
 dnsclient = "0.1.17"
-domain = { version = "0.7.0" }
 env_logger = "0.10.0"
 http = "0.2.8"
 itertools = "0.10.5"
 log = "0.4.17"
 mockall_double = "0.3.0"
-tokio = { version = "1.23.1", features = ["time", "macros"] }
+thiserror = "1.0.38"
+tokio = { version = "1.23.1", features = ["macros"] }
 
 [patch.crates-io]
 cloudflare = { git = "https://github.com/maxhoesel/cloudflare-rs" }

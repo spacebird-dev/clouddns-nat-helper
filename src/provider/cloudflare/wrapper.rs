@@ -11,10 +11,7 @@ use cloudflare::{
     },
 };
 
-use crate::{
-    config::TTL,
-    provider::{DnsRecord, ProviderError, RecordContent},
-};
+use crate::provider::{DnsRecord, ProviderError, RecordContent, TTL};
 
 const CLOUDFLARE_ZONE_PAGE_SIZE: u8 = 50;
 const CLOUDFLARE_RECORD_PAGE_SIZE: u16 = 5000;
@@ -145,7 +142,7 @@ impl CloudflareWrapper {
                 wrapper.cache = cache;
                 Ok(wrapper)
             }
-            Err(e) => Err(ProviderError { msg: e.to_string() }),
+            Err(e) => Err(ProviderError::Internal(e.to_string())),
         }
     }
 

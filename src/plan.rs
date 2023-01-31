@@ -1,138 +1,133 @@
 //! Plan the actions required to bring domains up-to-date.
 
-use std::{collections::HashMap, net::Ipv4Addr};
+use std::{fmt::Display, net::Ipv4Addr};
 
-use log::{info, trace};
+use log::info;
 
-use crate::{
-    config::Policy,
-    provider::DnsRecord,
-    registry::{ARegistry, Domain},
-};
+use crate::registry::ARegistry;
 
-/// A Plan is a list of actions (create or delete) that will be applied to a provider and their DNS records.
+pub type Domain = String;
+
+/// A Plan is a list of [`Action`]s that can be applied to a [`crate::registry::ARegistry`] and a [`crate::provider::Provider`].
 /// Plans contain the changes required to bring a provider from their current to their desired state.
 ///
-/// To create a new plan, you need to use [`Plan::generate()`]. Note that creating a Plan always requires a registry to check against.
-/// This prevents overwriting non-owned records.
-#[derive(Debug)]
+/// To create a new plan, use [`Plan::generate()`].
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
+pub struct Plan(Vec<Action>);
+
+/// Represents an action to be performed on a domain by a provider.
+/// Note that an individual action may entail multiple steps!
+/// For example: [`Action::DeleteAndRelease`] could require the deletion of several records if multiple A records are present.
+/// Therefore, [`Action`]s do **not** represent individual record actions.
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
 #[non_exhaustive]
-pub struct Plan {
-    pub create_actions: Vec<DnsRecord>,
-    pub delete_actions: Vec<DnsRecord>,
+pub enum Action {
+    /// Indicates that this domain is new and needs to be added.
+    /// This means claiming ownership with a [`crate::registry::ARegistry`] and then applying the Action to a [`crate::provider::Provider`].
+    ClaimAndUpdate(Domain, Ipv4Addr),
+    /// Indicates that this domain is already owned but is out-of-date.
+    Update(Domain, Ipv4Addr),
+    /// Indicates that the entry for this domain should be deleted and the domain released
+    DeleteAndRelease(Domain),
+}
+impl Display for Action {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Action::ClaimAndUpdate(d, ip) => write!(f, "CREATE {} => {}", d, ip),
+            Action::Update(d, ip) => write!(f, "UPDATE {} => {}", d, ip),
+            Action::DeleteAndRelease(d) => write!(f, "DELETE {}", d),
+        }
+    }
+}
+
+/// Policies limit the types of [`Action`] that will be added when generating a [`Plan`]:
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum Policy {
+    /// Will only create new records, will not update existing ones (even for owned domains!).
+    /// Note that the plan may still contain [`Action::Update`] for domains that are owned but do not currently have an A record.
+    CreateOnly,
+    /// Will create new records and update owned ones. Will not delete records for domains that no longer have an AAAA record.
+    Upsert,
+    /// Will perform all types of actions, including [`Action::ClaimAndUpdate`],[`Action::Update`] and [`Action::DeleteAndRelease`].
+    Sync,
 }
 
 impl Plan {
-    // Generate a dns record for a given name and address
-    fn create_a_action(name: String, addr: &Ipv4Addr) -> DnsRecord {
-        let c = DnsRecord {
-            domain_name: name,
-            content: crate::provider::RecordContent::A(*addr),
-        };
-        trace!("New record: {}", c);
-        c
+    pub fn actions(&self) -> impl Iterator<Item = &Action> + '_ {
+        self.0.iter()
     }
 
-    // Generate a list of DELETE records actions for all A records associated with a domain
-    fn delete_a_actions(domain: &Domain) -> Vec<DnsRecord> {
-        domain
-            .a
-            .iter()
-            .map(|addr| DnsRecord {
-                domain_name: domain.name.to_owned(),
-                content: crate::provider::RecordContent::A(*addr),
-            })
-            .inspect(|a| trace!("Removing existing record {}", a))
-            .collect()
+    fn add_create(&mut self, name: String, addr: Ipv4Addr) {
+        self.0.push(Action::ClaimAndUpdate(name, addr));
+    }
+
+    fn add_update(&mut self, name: String, addr: Ipv4Addr) {
+        self.0.push(Action::Update(name, addr));
+    }
+
+    fn add_delete(&mut self, name: String) {
+        self.0.push(Action::DeleteAndRelease(name));
     }
 
     /// Generate a new plan and return it.
     ///
     /// # Inputs
-    /// - registry: The [`ARegistry`] to use for managing ownership of A records.
-    ///             this is also the source of our domains to operate on
+    /// - registry: [`ARegistry`] that serves as the source of domains to evaluate
     /// - desired_address: The [`Ipv4Addr`] to insert into newly created A records
     /// - policy: [`Policy`]. Determines whether to overwrite or delete existing records.
-    ///
-    /// Note that generate automatically claims ownership of all available domains with the registry, before adding them to the plan.
-    /// This ensures that the plan only contains actions for domains that we actually own.
-    ///
-    /// Also note that ownership is not released for any domains in [`Plan::delete_actions`],
-    /// this needs to be done manually after the plan has been applied using [`ARegistry::release()`]
     pub fn generate(
         registry: &mut dyn ARegistry,
-        desired_address: &Ipv4Addr,
-        policy: &Policy,
+        desired_address: Ipv4Addr,
+        policy: Policy,
     ) -> Plan {
-        let mut plan = Plan {
-            create_actions: Vec::new(),
-            delete_actions: Vec::new(),
-        };
+        let mut plan = Plan(vec![]);
 
-        let owned = registry
-            .owned_domains()
-            .into_iter()
-            .map(|d| (d.name.to_owned(), d))
-            .collect::<HashMap<_, _>>();
-        info!("Currently owned domains: {:?}", owned.keys());
-
-        for domain in &registry.all_domains() {
-            if let Some(current) = owned.get(&domain.name) {
-                // We own this domains A records
-                if !current.aaaa.is_empty() {
-                    // There is at least one AAAA record, this domain needs to up-to-date
-                    if current.a.is_empty() {
-                        info!(
-                            "No A record found for owned domain {}, creating",
-                            current.name
-                        );
-                        plan.create_actions.push(Plan::create_a_action(
-                            domain.name.to_owned(),
-                            desired_address,
-                        ));
-                    } else if current.a.contains(desired_address) && current.a.len() == 1 {
-                        info!("Domain is already up-to-date: {}", domain.name);
-                        continue;
-                    } else if !matches!(policy, Policy::CreateOnly) {
-                        // Delete old ipv4 records and push our desired address
-                        info!(
-                            "Found outdated A record(s) for domain {}, updating",
-                            current.name
-                        );
-                        plan.delete_actions.extend(Plan::delete_a_actions(current));
-                        plan.create_actions.push(Plan::create_a_action(
-                            domain.name.to_owned(),
-                            desired_address,
-                        ));
-                    } else {
-                        info!("Found outdated A record(s) for domain {}, but policy is {:?}, not modifying. Records: {:?}", current.name, policy, current.a);
-                    }
-                } else if matches!(policy, Policy::Sync) {
+        for domain in &registry.owned_domains() {
+            if !domain.aaaa.is_empty() {
+                if domain.a.is_empty() {
                     info!(
-                        "No more AAAA records associated with owned domain {}, deleting",
+                        "No A record found for owned domain {}, creating",
                         domain.name
                     );
-                    plan.delete_actions.extend(Plan::delete_a_actions(domain));
+                    plan.add_update(domain.name.clone(), desired_address);
+                } else if domain.a.len() == 1 && domain.a[0] == desired_address {
+                    info!("Domain is already up-to-date: {}", domain.name);
+                    continue;
                 } else {
-                    info!("No more AAAA records associated with owned domain {}, but policy is {:?}, not modifying", current.name, policy);
-                }
-            } else if !domain.aaaa.is_empty() && domain.a.is_empty() {
-                // Domain not owned and matches our criteria (at least one AAAA record and no A records), see if we can claim it
-                match registry.claim(domain.name.as_str()) {
-                    Ok(_) => {
-                        info!("Claimed new domain {}", domain.name);
-                        plan.create_actions.push(Plan::create_a_action(
-                            domain.name.to_owned(),
-                            desired_address,
-                        ));
+                    match policy {
+                        Policy::CreateOnly => {
+                            info!("Found outdated A record(s) for domain {}, but policy is {:?}, not modifying. Records: {:?}", domain.name, policy, domain.a);
+                        }
+                        Policy::Upsert | Policy::Sync => {
+                            info!(
+                                "Found outdated A record(s) for domain {}, updating",
+                                domain.name
+                            );
+                            plan.add_update(domain.name.clone(), desired_address);
+                        }
                     }
-                    Err(e) => {
-                        info!("Unable to register domain {}: {}", domain.name, e);
+                }
+            } else {
+                match policy {
+                    Policy::Sync => {
+                        info!(
+                            "No more AAAA records associated with owned domain {}, deleting",
+                            domain.name
+                        );
+                        plan.add_delete(domain.name.clone());
+                    }
+                    Policy::Upsert | Policy::CreateOnly => {
+                        info!("No more AAAA records associated with owned domain {}, but policy is {:?}, not modifying", domain.name, policy);
                     }
                 }
             }
-            // Domain is not owned and does not have AAAA records, so we don't care
-            trace!("Skipped domain {}", domain.name);
+        }
+
+        for domain in &registry.available_domains() {
+            if !domain.aaaa.is_empty() && domain.a.is_empty() {
+                // Domain not owned and matches our criteria (at least one AAAA record and no A records), try to create our A record
+                plan.add_create(domain.name.clone(), desired_address);
+            }
         }
         plan
     }
@@ -141,14 +136,13 @@ impl Plan {
 #[cfg(test)]
 mod tests {
     use std::{
+        collections::HashSet,
         net::{Ipv4Addr, Ipv6Addr},
         vec,
     };
 
-    use totems::assert_contains;
-
     use crate::{
-        provider::DnsRecord,
+        plan::{Action, Policy},
         registry::{ARegistry, Domain, MockARegistry},
     };
 
@@ -288,234 +282,133 @@ mod tests {
                 owned_to_delete_multiple_a_without_correct_d(),
             ]
         });
+        mock.expect_available_domains()
+            .returning(|| vec![available_d()]);
+        mock.expect_owned_domains().returning(|| {
+            vec![
+                owned_correct_d(),
+                owned_to_insert_d(),
+                owned_to_update_d(),
+                owned_multiple_a_with_correct_d(),
+                owned_multiple_a_without_correct_d(),
+                owned_to_delete_incorrect_a_d(),
+                owned_to_delete_correct_a_d(),
+                owned_to_delete_multiple_a_with_correct_d(),
+                owned_to_delete_multiple_a_without_correct_d(),
+            ]
+        });
+        mock.expect_taken_domains().returning(|| vec![taken_d()]);
         mock.expect_claim()
-            .withf(|name| name == &available_d().name.as_str())
+            .withf(|name| name == available_d().name.as_str())
             .return_const(Ok(()));
         Box::new(mock)
     }
 
     #[test]
     fn should_generate_valid_plan_sync() {
-        let plan = Plan::generate(mock().as_mut(), &DESIRED_IP, &crate::config::Policy::Sync);
-
-        let create_must_contain = vec![
-            DnsRecord {
-                domain_name: owned_to_insert_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
-            DnsRecord {
-                domain_name: owned_to_update_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
-            DnsRecord {
-                domain_name: available_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
-            DnsRecord {
-                domain_name: owned_multiple_a_without_correct_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
+        let create_expected = vec![Action::ClaimAndUpdate(available_d().name, DESIRED_IP)];
+        let update_expected = vec![
+            Action::Update(owned_multiple_a_without_correct_d().name, DESIRED_IP),
+            Action::Update(owned_to_insert_d().name, DESIRED_IP),
+            Action::Update(owned_to_update_d().name, DESIRED_IP),
+            Action::Update(owned_multiple_a_with_correct_d().name, DESIRED_IP),
         ];
-        // If an owned domain somehow contains multiple A records, one of which is valid, that record could be deleted and recreated,
-        // or the tests can leave it alone. Either option is valid
-        let may_delete_and_recreate = vec![DnsRecord {
-            domain_name: owned_multiple_a_with_correct_d().name,
-            content: crate::provider::RecordContent::A(DESIRED_IP),
-        }];
-        let delete_must_contain = vec![
-            // Providers do not implement an "update" method, so updating an existing record involves recreating it
-            DnsRecord {
-                domain_name: owned_to_update_d().name,
-                content: crate::provider::RecordContent::A(owned_to_update_d().a.remove(0)),
-            },
-            // All the incorrect A records need to be deleted
-            DnsRecord {
-                domain_name: owned_multiple_a_with_correct_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_multiple_a_with_correct_d().a.remove(1),
-                ),
-            },
-            DnsRecord {
-                domain_name: owned_multiple_a_without_correct_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_multiple_a_without_correct_d().a.remove(0),
-                ),
-            },
-            DnsRecord {
-                domain_name: owned_multiple_a_without_correct_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_multiple_a_without_correct_d().a.remove(1),
-                ),
-            },
-            // Standard deletes if no more AAAA record is present
-            DnsRecord {
-                domain_name: owned_to_delete_correct_a_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
-            DnsRecord {
-                domain_name: owned_to_delete_incorrect_a_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_to_delete_incorrect_a_d().a.remove(0),
-                ),
-            },
-            // Needs to delete both the incorrect and the correct A records
-            DnsRecord {
-                domain_name: owned_to_delete_multiple_a_with_correct_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_to_delete_multiple_a_with_correct_d().a.remove(0),
-                ),
-            },
-            DnsRecord {
-                domain_name: owned_to_delete_multiple_a_with_correct_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_to_delete_multiple_a_with_correct_d().a.remove(1),
-                ),
-            },
-            DnsRecord {
-                domain_name: owned_to_delete_multiple_a_without_correct_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_to_delete_multiple_a_without_correct_d().a.remove(0),
-                ),
-            },
-            DnsRecord {
-                domain_name: owned_to_delete_multiple_a_without_correct_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_to_delete_multiple_a_without_correct_d().a.remove(1),
-                ),
-            },
+        let delete_expected = vec![
+            Action::DeleteAndRelease(owned_to_delete_correct_a_d().name),
+            Action::DeleteAndRelease(owned_to_delete_incorrect_a_d().name),
+            Action::DeleteAndRelease(owned_to_delete_multiple_a_with_correct_d().name),
+            Action::DeleteAndRelease(owned_to_delete_multiple_a_without_correct_d().name),
         ];
 
-        // Check that all the required records are present
-        for r in &create_must_contain {
-            assert_contains!(&plan.create_actions, r);
-        }
-        for r in &delete_must_contain {
-            assert_contains!(&plan.delete_actions, r);
-        }
+        let plan = Plan::generate(mock().as_mut(), DESIRED_IP, Policy::Sync);
 
-        // Check that there are no other records that snuck into the plan
-        for r in &plan.create_actions {
-            if !create_must_contain.contains(r) {
-                // Some records may be deleted and recreated, ensure that they are present in both actions
-                assert_contains!(&may_delete_and_recreate, r);
-                assert_contains!(&plan.delete_actions, r);
-            }
-        }
-        for r in &plan.delete_actions {
-            if !delete_must_contain.contains(r) {
-                // Some records may be deleted and recreated, ensure that they are present in both actions
-                assert_contains!(&may_delete_and_recreate, r);
-                assert_contains!(&plan.create_actions, r);
-            }
-        }
+        assert_eq!(
+            HashSet::from_iter(create_expected.iter().cloned()),
+            plan.actions()
+                .filter(|a| matches!(a, crate::plan::Action::ClaimAndUpdate(_, _)))
+                .cloned()
+                .collect::<HashSet<_>>()
+        );
+        assert_eq!(
+            HashSet::from_iter(update_expected.iter().cloned()),
+            plan.actions()
+                .filter(|a| matches!(a, crate::plan::Action::Update(_, _)))
+                .cloned()
+                .collect::<HashSet<_>>()
+        );
+        assert_eq!(
+            HashSet::from_iter(delete_expected.iter().cloned()),
+            plan.actions()
+                .filter(|a| matches!(a, crate::plan::Action::DeleteAndRelease(_)))
+                .cloned()
+                .collect::<HashSet<_>>()
+        );
     }
 
     #[test]
     fn should_generate_valid_plan_create_only() {
-        let plan = Plan::generate(
-            mock().as_mut(),
-            &DESIRED_IP,
-            &crate::config::Policy::CreateOnly,
+        let create_expected = vec![Action::ClaimAndUpdate(available_d().name, DESIRED_IP)];
+        let update_expected = vec![Action::Update(owned_to_insert_d().name, DESIRED_IP)];
+        let delete_expected: Vec<Action> = vec![];
+
+        let plan = Plan::generate(mock().as_mut(), DESIRED_IP, Policy::CreateOnly);
+
+        assert_eq!(
+            HashSet::from_iter(create_expected.iter().cloned()),
+            plan.actions()
+                .filter(|a| matches!(a, crate::plan::Action::ClaimAndUpdate(_, _)))
+                .cloned()
+                .collect::<HashSet<_>>()
         );
-
-        let create_must_contain = vec![
-            DnsRecord {
-                domain_name: owned_to_insert_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
-            DnsRecord {
-                domain_name: available_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
-        ];
-
-        // Check that all the required records are present
-        // Poor mans order-independent equivalence check
-        for r in &create_must_contain {
-            assert_contains!(&plan.create_actions, r);
-        }
-        for r in &plan.create_actions {
-            assert_contains!(&create_must_contain, r);
-        }
+        assert_eq!(
+            HashSet::from_iter(update_expected.iter().cloned()),
+            plan.actions()
+                .filter(|a| matches!(a, crate::plan::Action::Update(_, _)))
+                .cloned()
+                .collect::<HashSet<_>>()
+        );
+        assert_eq!(
+            HashSet::from_iter(delete_expected.iter().cloned()),
+            plan.actions()
+                .filter(|a| matches!(a, crate::plan::Action::DeleteAndRelease(_)))
+                .cloned()
+                .collect::<HashSet<_>>()
+        );
     }
 
     #[test]
-    fn should_generate_valid_plan_update() {
-        let plan = Plan::generate(mock().as_mut(), &DESIRED_IP, &crate::config::Policy::Upsert);
-
-        let create_must_contain = vec![
-            DnsRecord {
-                domain_name: owned_to_insert_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
-            DnsRecord {
-                domain_name: owned_to_update_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
-            DnsRecord {
-                domain_name: available_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
-            DnsRecord {
-                domain_name: owned_multiple_a_without_correct_d().name,
-                content: crate::provider::RecordContent::A(DESIRED_IP),
-            },
+    fn should_generate_valid_plan_upsert() {
+        let create_expected = vec![Action::ClaimAndUpdate(available_d().name, DESIRED_IP)];
+        let update_expected = vec![
+            Action::Update(owned_multiple_a_without_correct_d().name, DESIRED_IP),
+            Action::Update(owned_to_insert_d().name, DESIRED_IP),
+            Action::Update(owned_to_update_d().name, DESIRED_IP),
+            Action::Update(owned_multiple_a_with_correct_d().name, DESIRED_IP),
         ];
-        // If an owned domain somehow contains multiple A records, one of which is valid, that record could be deleted and recreated,
-        // or the plan can leave it alone. Either option is valid
-        let may_delete_and_recreate = vec![DnsRecord {
-            domain_name: owned_multiple_a_with_correct_d().name,
-            content: crate::provider::RecordContent::A(DESIRED_IP),
-        }];
-        let delete_must_contain = vec![
-            // Providers do not implement an "update" method, so updating an existing record involves recreating it
-            DnsRecord {
-                domain_name: owned_to_update_d().name,
-                content: crate::provider::RecordContent::A(owned_to_update_d().a.remove(0)),
-            },
-            // All the incorrect A records need to be deleted
-            DnsRecord {
-                domain_name: owned_multiple_a_with_correct_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_multiple_a_with_correct_d().a.remove(1),
-                ),
-            },
-            DnsRecord {
-                domain_name: owned_multiple_a_without_correct_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_multiple_a_without_correct_d().a.remove(0),
-                ),
-            },
-            DnsRecord {
-                domain_name: owned_multiple_a_without_correct_d().name,
-                content: crate::provider::RecordContent::A(
-                    owned_multiple_a_without_correct_d().a.remove(1),
-                ),
-            },
-        ];
+        let delete_expected: Vec<Action> = vec![];
 
-        // Check that all the required records are present
-        for r in &create_must_contain {
-            assert_contains!(&plan.create_actions, r);
-        }
-        for r in &delete_must_contain {
-            assert_contains!(&plan.delete_actions, r);
-        }
+        let plan = Plan::generate(mock().as_mut(), DESIRED_IP, Policy::Upsert);
 
-        // Check that there are no other records that snuck into the plan
-        for r in &plan.create_actions {
-            if !create_must_contain.contains(r) {
-                // Some records may be deleted and recreated, ensure that they are present in both actions
-                assert_contains!(&may_delete_and_recreate, r);
-                assert_contains!(&plan.delete_actions, r);
-            }
-        }
-        for r in &plan.delete_actions {
-            if !delete_must_contain.contains(r) {
-                // Some records may be deleted and recreated, ensure that they are present in both actions
-                assert_contains!(&may_delete_and_recreate, r);
-                assert_contains!(&plan.create_actions, r);
-            }
-        }
+        assert_eq!(
+            HashSet::from_iter(create_expected.iter().cloned()),
+            plan.actions()
+                .filter(|a| matches!(a, crate::plan::Action::ClaimAndUpdate(_, _)))
+                .cloned()
+                .collect::<HashSet<_>>()
+        );
+        assert_eq!(
+            HashSet::from_iter(update_expected.iter().cloned()),
+            plan.actions()
+                .filter(|a| matches!(a, crate::plan::Action::Update(_, _)))
+                .cloned()
+                .collect::<HashSet<_>>()
+        );
+        assert_eq!(
+            HashSet::from_iter(delete_expected.iter().cloned()),
+            plan.actions()
+                .filter(|a| matches!(a, crate::plan::Action::DeleteAndRelease(_)))
+                .cloned()
+                .collect::<HashSet<_>>()
+        );
     }
 }

@@ -8,7 +8,7 @@ use itertools::Itertools;
 use log::{debug, info, warn};
 
 use self::util::{insert_rec_into_d, txt_record_string, TXT_RECORD_IDENT};
-use super::{ARegistry, Domain, DomainName, Ownership, RegistryError};
+use super::{ARegistry, Domain, Ownership, RegistryError};
 use crate::provider::Provider;
 
 /// The TxtRegistry manages ownership for each domains A record via an associated TXT record
@@ -28,6 +28,7 @@ pub struct TxtRegistry<'a> {
     domains: HashMap<String, Domain>,
     tenant: String,
     provider: &'a dyn Provider,
+    dry_run: bool,
 }
 
 impl TxtRegistry<'_> {
@@ -103,6 +104,7 @@ impl TxtRegistry<'_> {
             domains,
             tenant,
             provider,
+            dry_run: false,
         }))
     }
 }
@@ -120,14 +122,14 @@ impl ARegistry for TxtRegistry<'_> {
         self.domains.values().cloned().collect_vec()
     }
 
-    fn claim(&mut self, name: DomainName) -> Result<(), super::RegistryError> {
-        if !self.domains.contains_key(name) {
-            return Err(RegistryError {
-                msg: format!("Domain {} not in registry", name),
+    fn claim(&mut self, name: &str) -> Result<(), super::RegistryError> {
+        let Some(reg_d) = self.domains.get_mut(name) else {
+            return Err(RegistryError::ClaimError {
+                domain: name.to_string(),
+                reason: "Not in registry".to_string(),
             });
-        }
+        };
 
-        let reg_d = self.domains.get_mut(name).unwrap();
         match reg_d.a_ownership {
             Ownership::Owned => {
                 info!(
@@ -136,15 +138,19 @@ impl ARegistry for TxtRegistry<'_> {
                 );
                 Ok(())
             }
-            Ownership::Taken => Err(RegistryError {
-                msg: format!("Domain {} is already owned by other instance", name),
+            Ownership::Taken => Err(RegistryError::ClaimError {
+                domain: name.to_string(),
+                reason: "Owned by other instance".to_string(),
             }),
             Ownership::Available => {
-                self.provider
-                    .create_txt_record(reg_d.name.to_owned(), txt_record_string(&self.tenant))
-                    .map_err(|e| RegistryError {
-                        msg: format!("Unable to claim domain {}: {}", name, e),
-                    })?;
+                if !self.dry_run {
+                    self.provider
+                        .create_txt_record(reg_d.name.to_owned(), txt_record_string(&self.tenant))
+                        .map_err(|e| RegistryError::ClaimError {
+                            domain: name.to_string(),
+                            reason: format!("Provider Error: {}", e),
+                        })?;
+                }
                 reg_d.a_ownership = Ownership::Owned;
                 debug!("Successfully claimed domain {}", name);
                 Ok(())
@@ -152,30 +158,31 @@ impl ARegistry for TxtRegistry<'_> {
         }
     }
 
-    fn release(&mut self, name: DomainName) -> Result<(), RegistryError> {
-        if !self.domains.contains_key(name) {
-            return Err(RegistryError {
-                msg: format!("Domain {} not in registry", name),
+    fn release(&mut self, name: &str) -> Result<(), RegistryError> {
+        let Some(reg_d) = self.domains.get_mut(name) else {
+            return Err(RegistryError::ReleaseError {
+                domain: name.to_string(),
+                reason: "Not in registry".to_string(),
             });
-        }
+        };
 
-        let reg_d = self.domains.get_mut(name).unwrap();
         match reg_d.a_ownership {
             Ownership::Owned => {
-                self.provider
-                    .delete_txt_record(reg_d.name.to_owned(), txt_record_string(&self.tenant))
-                    .map_err(|e| RegistryError {
-                        msg: format!("unable to release domain {}: {}", name, e),
-                    })?;
+                if !self.dry_run {
+                    self.provider
+                        .delete_txt_record(reg_d.name.to_owned(), txt_record_string(&self.tenant))
+                        .map_err(|e| RegistryError::ReleaseError {
+                            domain: name.to_string(),
+                            reason: format!("Provider Error: {}", e),
+                        })?;
+                }
                 reg_d.a_ownership = Ownership::Available;
                 debug!("Sucessfully released domain {}", name);
                 Ok(())
             }
-            Ownership::Taken => Err(RegistryError {
-                msg: format!(
-                    "Cannot release domain {} as it is owned by someone else",
-                    name
-                ),
+            Ownership::Taken => Err(RegistryError::ReleaseError {
+                domain: name.to_string(),
+                reason: "Owned by other instance".to_string(),
             }),
             Ownership::Available => {
                 info!("Attempted to release domain {}, but it is already not owned by anyone. Ignoring", name);
@@ -186,6 +193,11 @@ impl ARegistry for TxtRegistry<'_> {
 
     fn set_tenant(&mut self, tenant: String) {
         self.tenant = tenant;
+    }
+
+    fn enable_dry_run(&mut self) -> Result<(), RegistryError> {
+        self.dry_run = true;
+        Ok(())
     }
 }
 
