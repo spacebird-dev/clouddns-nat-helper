@@ -34,7 +34,7 @@ http = "0.2.9"
 itertools = "0.10.5"
 log = "0.4.17"
 mockall_double = "0.3.0"
-thiserror = "1.0.38"
+thiserror = "1.0.40"
 tokio = { version = "1.26.0", features = ["macros"] }
 
 [patch.crates-io]
