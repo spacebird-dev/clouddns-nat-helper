@@ -28,7 +28,7 @@ totems = "0.2.7"
 [dependencies]
 clap = { version = "4.1.14", features = ["derive", "env"] }
 cloudflare = { version = "0.10.1", features = ["rustls-tls"], default-features = false}
-dnsclient = "0.1.17"
+dnsclient = "0.1.18"
 env_logger = "0.10.0"
 http = "0.2.9"
 itertools = "0.10.5"

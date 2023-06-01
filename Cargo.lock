@@ -591,9 +591,9 @@ dependencies = [
 
 [[package]]
 name = "dnsclient"
-version = "0.1.17"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ea154342c7e8ab9894cfec8373300c6df6fc4082b4a3a3750fd3a8365d4d9ce"
+checksum = "e2f14b3b465bc4911d0d758f8c6d55cfce09dd9663a8c103fe7e13b22a744fa1"
 dependencies = [
  "async-std",
  "dnssector",
@@ -602,9 +602,9 @@ dependencies = [
 
 [[package]]
 name = "dnssector"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "424af4d14d5169dffe7df9aab1271f7a0fd5576fc00d9eb8d666a0a629b81c8e"
+checksum = "d545e9b03e229533db4879edc8cc21214ad22e5bdcf5174d80e2ab3ec1e0a664"
 dependencies = [
  "anyhow",
  "byteorder",
