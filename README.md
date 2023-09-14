@@ -219,5 +219,5 @@ To see which targets are available, run `cargo make --list-category-steps build`
 
 ### Release Management
 
-To create a new release, run the "Create Release PR" Action. This will generate a PR that you can then review and merge.
-From there, the CI will automatically publish artifacts, etc.
+Draft Releases are automatically managed through the `version-maintenance` workflow.
+Follow the instructions in those drafts to publish a new release.
