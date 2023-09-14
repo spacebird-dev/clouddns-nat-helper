@@ -4,7 +4,7 @@ version = "0.2.10"
 edition = "2021"
 description = "Autogenerate A records for NAT setups from AAAA records in cloud providers"
 license-file = "LICENSE"
-repository = "https://github.com/maxhoesel/clouddns-nat-helper"
+repository = "https://github.com/spacebird-dev/clouddns-nat-helper"
 keywords = ["dns", "cloud", "cloudflare", "nat", "ipv4"]
 categories = ["command-line-utilities"]
 exclude = [
@@ -12,7 +12,6 @@ exclude = [
     "imgs",
     ".dockerignore",
     "Dockerfile",
-    "helm",
     ".gitignore",
     ".pre-commit-config.yaml",
     "lcov.info",
@@ -27,7 +26,9 @@ totems = "0.2.7"
 
 [dependencies]
 clap = { version = "4.4.2", features = ["derive", "env"] }
-cloudflare = { version = "0.10.1", features = ["rustls-tls"], default-features = false}
+cloudflare = { version = "0.10.1", features = [
+    "rustls-tls",
+], default-features = false }
 dnsclient = "0.1.18"
 env_logger = "0.10.0"
 http = "0.2.9"
@@ -38,4 +39,4 @@ thiserror = "1.0.40"
 tokio = { version = "1.26.0", features = ["macros"] }
 
 [patch.crates-io]
-cloudflare = { git = "https://github.com/maxhoesel/cloudflare-rs" }
+cloudflare = { git = "https://github.com/spacebird-dev/cloudflare-rs", rev = "ee0a23796b2b1f31310e4a9164ac62515f8a1823" }

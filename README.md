@@ -5,11 +5,11 @@
 
 # clouddns-nat-helper
 
-A utility to automatically generate `A` DNS records for hosts behind a NAT based on existing AAAA records in a DNS zone.
+A utility to automatically generate Ipv4 `A` DNS records for hosts based on existing AAAA records in a DNS zone.
 
-## What? Who in their right mind would need this?
+## Use Case
 
-This tool was written with a rather specific scenario in mind:
+This tool was written with a the following scenario in mind:
 
 - You host one or more application(s)
 - The application servers are reachable normally via IPv6 and have public DNS records, while IPv4 access happens through NAT
@@ -45,7 +45,7 @@ Another approach (which is what this tool does) is to configure external-dns to 
 
 [^1]: Note that this requires running two versions of external-dns, one for IPv4 with the hardcoded value, and one for IPv6. It might get messy
 
-# How it works
+## How it works
 
 This tool operates in 3 basic steps:
 1. It reads records from a DNS provider such as Cloudflare
@@ -56,31 +56,30 @@ nat-helper also keeps track of domain ownership using TXT records (or potentiall
 meaning that it *knows* which domains A records were created by it, and which ones weren't.
 This also allows us to track changes, update records when they become outdated and delete A records for a owned domain when there are no more AAAA records.
 
-# Status
+## Status
 
-If you couldn't tell from the above description, this is a hobby project for a rather specific use case.
-That said, I built it with reliability, safety and extensibility in mind and it has served its purpose well.
-Still, use it at your own risk. I may break things in future releases if needed.
+This project is intended for experimental, hobbyist and other non-production uses.
+That said, it is built it with reliability, safety and extensibility in mind.
+Still, use it at your own risk. Breaking changes may occur in future releases if needed.
 
 Providers, Registries and Ipv4Sources use pluggable interfaces, so adding new ones in the future should be simple.
 
-# Installation
+## Installation
 
-## Binary
+### Binary
 
 You can download linux binaries from the [releases page](https://github.com/maxhoesel/clouddns-nat-helper/releases).
 
-## With Cargo
+### With Cargo
 
 If you have `cargo` installed, simply run
 
 `cargo install clouddns-nat-helper`
 
-## Via Docker
+### Via Docker
 
 Docker images are automatically built and pushed to the following registries:
 
-- [DockerHub](https://hub.docker.com/r/maxhoesel/clouddns-nat-helper)
 - [GitHub Packages](https://ghcr.io/maxhoesel/clouddns-nat-helper)
 - [Quay.io](https://quay.io/maxhoesel/clouddns-nat-helper)
 
@@ -105,23 +104,30 @@ CLOUDDNS_NAT_IPV4_HOSTNAME=maxhoesel.de
 
 You can also create your own container by running: `docker build` in the root of this project.
 
-## In a kubernetes cluster
+### In a kubernetes cluster
 
-There is a helm chart available for download  [here](https://github.com/maxhoesel/clouddns-nat-helper/tree/main/helm/charts/clouddns-nat-helper).
+The officially recommanded way to install `clouddns-nat-helper` is through Helm.
 
-Download your desired version (using the GitHub tag selection menu), then install is with the usual helm commands:
+First, install the repository like so:
 
-`helm install my-helper --namespace my-helper --create-namespace --values values.yml ./charts/clouddns-nat-helper`
+`helm repo add spacebird https://charts.spacebird.dev`
 
-A repository to install from may be created in the future.
+Then, install the chart:
 
-# Usage
+```sh
+helm install clouddns-nat-helper spacebird/clouddns-nat-helper \
+  --create-namespace
+  --namespace clouddns-nat-helper
+  --values values.yml
+```
+
+## Usage
 
 (Almost) all flags can be passed via a command-line or as an environment variable.
 
 See `clouddns-nat-helper --help` for a list of all flags
 
-## Quick-Start
+### Quick-Start
 
 `clouddns-nat-helper -s hostname -p cloudflare --ipv4-hostname <yourdomain.invalid> --cloudflare-api-token <your_cf_api_token>`
 
@@ -137,7 +143,7 @@ Some other useful options:
 - `--run-once`: Set this if you just want to run the tool once
 - `--interval/-i`: Set a different interval between runs from the default of 60 seconds
 
-## Limiting performed actions and controlling ownership
+### Limiting performed actions and controlling ownership
 
 As mentioned above, this tool will NOT touch any records that it did not create/does not own.
 On its own, this should prevent any conflicts with manually entered IPv4 addresses or other DNS automation.
@@ -160,39 +166,30 @@ The `--policy` flag can be used to limit the actions that this tool may perform 
 - `upsert`: Create records and update existing ones, but don't delete A records if their corresponding AAAA records get removed
 - `sync` (default): Perform create, update and delete actions as needed
 
-# Development
+## Development
 
-## Getting started
+### Getting started
 
-The steps below assume that you have a rust toolchain and `cargo` installed on your system.
-
-To use the pre-commit hooks, `pre-commit` needs to be installed and in $PATH
+To begin development on this project, follow the steps below:
 
 1. Clone this repository
-2. Install cargo-make: `cargo install cargo-make`
-3. To setup a development environment: `cargo make dev-env`
+2. Install cargo-make: `cargo install cargo-make --locked`
+3. (Optional but recommended) Install [pre-commit](https://pre-commit.com/)
+4. (Optional, for Docker builds and cross-compiling) Ensure docker is installed
 4. Happy hacking!
 
-## Builds, Tests, Docs
-
-Most common actions can be performed with `cargo-make`.
-This will automatically install build-time dependencies and perform other setup steps, if required
-
-You can use either `cargo make` or `makers` to run the commands below.
+This project uses an up-to-date version of Rust and `cargo-make` for builds.
+Most common actions can be performed by running `cargo make <command>`.
+See `cargo make --list-all-steps` for a list of available actions.
 
 ### Linting
 
 - `cargo make lint`
 
-### Create a build
+### Building
 
-To create a basic local build, just run:
-
-`cargo make build`
-
-For a release binary:
-
-`cargo make -p release build`
+- Local Build: `cargo make build`
+- For a release binary: `cargo make -p release build`
 
 This project uses [`cross`](https://github.com/cross-rs/cross) to cross-compile binaries for different target platforms.
 You can create a binary for a different target like so:
@@ -202,34 +199,25 @@ You can create a binary for a different target like so:
 
 To see which targets are available, run `cargo make --list-category-steps build`
 
-### Run Tests
+### Tests
 
 - Default (host) target: `cargo make test`
 - Custom target: `cargo make test-aarch64-unknown-linux-gnu`
 - Get a coverage report: `cargo make coverage`
 
-### Create docs
+### Docs
 
 - `cargo make docs`
 
-### Create Docker images
+### Docker
 
-This will create a docker image suitable for your local machine:
+- To build a image for your local platform: `cargo make docker`
+- Custom target: `cargo make docker-arm64`
+    - Make sure your system can build [multi-platform images](https://docs.docker.com/build/building/multi-platform/) using QEMU
+    - `cargo-make` will automatically generate an appropriate builder.
+- To build the image with a custom tag: `cargo make -e DOCKER_TAG=registry.invalid/user/project:0.1.2 docker`
 
-`cargo make -e DOCKER_TAG=mytag docker`
-
-
-We use [docker-buildx](https://docs.docker.com/build/building/multi-platform/) in the CI to generate multi-arch images.
-To generate **and push** such an image locally, first install docker-buildx and ensure that the QEMU support is working.
-Then, create a builder using the docker-container driver and switch to it:
-
-`docker buildx create --name mybuilder --driver docker-container --bootstrap --use`
-
-Then, run:
-
-`cargo make -e DOCKER_TAG=user/repo:latest docker-multiarch`
-
-# Release Management
+### Release Management
 
 To create a new release, run the "Create Release PR" Action. This will generate a PR that you can then review and merge.
 From there, the CI will automatically publish artifacts, etc.

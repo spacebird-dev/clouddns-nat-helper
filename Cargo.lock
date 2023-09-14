@@ -203,13 +203,13 @@ checksum = "7a40729d2133846d9ed0ea60a8b9541bccddab49cd30f0715a1da672fe9a2524"
 
 [[package]]
 name = "async-trait"
-version = "0.1.64"
+version = "0.1.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cd7fce9ba8c3c042128ce72d8b2ddbf3a05747efb67ea0313c635e10bda47a2"
+checksum = "7b2d0f03b3640e3a630367e40c468cb7f309529c708ed1d88597047b0e7c6ef7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.107",
+ "syn 2.0.12",
 ]
 
 [[package]]
@@ -409,7 +409,7 @@ dependencies = [
 [[package]]
 name = "cloudflare"
 version = "0.10.1"
-source = "git+https://github.com/maxhoesel/cloudflare-rs#ee0a23796b2b1f31310e4a9164ac62515f8a1823"
+source = "git+https://github.com/spacebird-dev/cloudflare-rs?rev=ee0a23796b2b1f31310e4a9164ac62515f8a1823#ee0a23796b2b1f31310e4a9164ac62515f8a1823"
 dependencies = [
  "anyhow",
  "async-trait",

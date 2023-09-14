@@ -1,14 +1,9 @@
-FROM rust:1.68 as builder
-
-WORKDIR /usr/local/src
-
-COPY . .
-
-RUN cargo install --path .
-
 FROM debian:bullseye-slim
 
-COPY --from=builder /usr/local/cargo/bin/clouddns-nat-helper /usr/local/bin/clouddns-nat-helper
+ARG RUST_TARGET=""
+ARG PROFILE_DIR
+
+COPY target/${RUST_TARGET}/${PROFILE_DIR}/clouddns-nat-helper /usr/local/bin/
 RUN chmod +x /usr/local/bin/clouddns-nat-helper
 
 # run unprivileged

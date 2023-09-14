@@ -1,177 +1,182 @@
-# Don't use cargo-makes included tasks
 [config]
+# Don't use cargo-makes included tasks
 skip_core_tasks = true
+# Operate on the workspace level instead of the crate level
+default_to_workspace = false
 
+[env]
+# Default docker tag
+DOCKER_TAG = { value = "quay.io/maxhoesel/clouddns-nat-helper:latest", condition.env_not_set = [
+    "DOCKER_TAG",
+] }
 [env.development]
-TARGET_FOLDER = "debug"
-
+PROFILE_DIR = "debug"
 [env.release]
 RELEASE_FLAG = "--release"
-TARGET_FOLDER = "release"
+PROFILE_DIR = "release"
 
 # DEPENDENCIES
-[tasks.install-clippy]
-private = true
-install_crate = { rustup_component_name = "clippy", binary = "clippy", test_arg = "--help" }
-
-[tasks.install-rustfmt]
-private = true
-install_crate = { rustup_component_name = "rustfmt", binary = "rustfmt", test_arg = "--help" }
-
 [tasks.install-cross]
 private = true
 install_crate = { crate_name = "cross", binary = "cross", test_arg = "--help" }
-
-[tasks.install-pre-commit-hook]
+[tasks.install-llvm-cov]
 private = true
-script = '''
-#!/usr/bin/env bash
+install_crate = { crate_name = "cargo-llvm-cov", binary = "cargo-llvm-cov", test_arg = "--help" }
 
-if ! command -v pre-commit > /dev/null; then
-    cat <<- EOF
-+---------------------------------------------------------+
-|    Could not find 'pre-commit' executable in PATH       |
-|                                                         |
-| If you would like to make use of the pre-commit hooks,  |
-| install pre-commit, then run 'cargo make dev-env' again |
-+---------------------------------------------------------+
-EOF
-    exit
-else
-    pre-commit install > /dev/null
-fi
-'''
-
-[tasks.dev-env]
-description = "Configure a development environment"
-dependencies = [
-    "install-clippy",
-    "install-rustfmt",
-    "install-pre-commit-hook",
-]
+[tasks.default]
+alias = "build"
 
 # LINTING
 [tasks.lint]
 description = "Lint this project"
-category = "lint"
+category = "Lint"
 dependencies = ["clippy", "format"]
 [tasks.clippy]
-category = "lint"
+category = "Lint"
 description = "Run clippy"
 dependencies = ["install-clippy"]
 command = "cargo"
 args = ["clippy"]
 [tasks.format]
-category = "line"
+category = "Lint"
 description = "Format the codebase"
 dependencies = ["install-rustfmt"]
 command = "cargo"
-args = ["fmt"]
+args = ["fmt", "--all"]
+
 
 # BUILDS
 [tasks.build]
-category = "build"
-description = "Build the project"
+category = "Build"
 command = "cargo"
-args = ["build", "--all-features", "@@remove-empty(RELEASE_FLAG)"]
-# Officially supported targets
+args = [
+    "build",
+    "--all-features",
+    "--workspace",
+    "@@remove-empty(RELEASE_FLAG)",
+]
+[tasks.build-cross]
+private = true
+dependencies = ["install-cross"]
+command = "cross"
+args = [
+    "build",
+    "--all-features",
+    "--workspace",
+    "--target",
+    "${TARGET}",
+    "@@remove-empty(RELEASE_FLAG)",
+]
 [tasks.build-x86_64-unknown-linux-gnu]
-category = "build"
-dependencies = ["install-cross"]
-command = "cross"
-args = ["build", "--all-features", "--target", "x86_64-unknown-linux-gnu", "@@remove-empty(RELEASE_FLAG)"]
+private = false
+category = "Build"
+env = { "TARGET" = "x86_64-unknown-linux-gnu" }
+extend = "build-cross"
 [tasks.build-aarch64-unknown-linux-gnu]
-category = "build"
-dependencies = ["install-cross"]
-command = "cross"
-args = ["build", "--all-features", "--target", "aarch64-unknown-linux-gnu", "@@remove-empty(RELEASE_FLAG)"]
-[tasks.build-x86_64-pc-windows-gnu]
-category = "build"
-dependencies = ["install-cross"]
-command = "cross"
-args = ["build", "--all-features", "--target", "x86_64-pc-windows-gnu", "@@remove-empty(RELEASE_FLAG)"]
+private = false
+category = "Build"
+env = { "TARGET" = "aarch64-unknown-linux-gnu" }
+extend = "build-cross"
 
 
 # TESTS
 [tasks.test]
-category = "test"
-description = "Test the project"
+category = "Test"
 command = "cargo"
-args = ["test", "--all-features"]
-# Officially supported targets
-[tasks.test-x86_64-unknown-linux-gnu]
-category = "test"
-dependencies = ["install-cross"]
-command = "cross"
-args = ["test", "--all-features", "--target", "x86_64-unknown-linux-gnu"]
-[tasks.test-aarch64-unknown-linux-gnu]
-category = "test"
-dependencies = ["install-cross"]
-command = "cross"
-args = ["test", "--all-features", "--target", "aarch64-unknown-linux-gnu"]
-[tasks.test-x86_64-pc-windows-gnu]
-category = "test"
-dependencies = ["install-cross"]
-command = "cross"
-args = ["test", "--all-features", "--target", "x86_64-pc-windows-gnu"]
-
-[tasks.docker]
-description = "Build a local docker image"
-command = "docker"
-args = [
-    "build",
-    "-t",
-    "${DOCKER_TAG}",
-    "."
-]
-[tasks.docker-multiarch]
-description = "Build a multiarch docker image"
-dependencies = ["docker-collect-binaries"]
-command = "docker"
-args = [
-    "buildx", "build",
-    "-f", "Dockerfile.multiarch",
-    "--platform", "linux/amd64,linux/arm64",
-    "--build-arg", "binary_dir=binaries",
-    "--build-arg", "binary_name=${CARGO_MAKE_CRATE_NAME}",
-    "--tag", "${DOCKER_TAG}",
-    "--push", "."
-]
-[tasks.docker-collect-binaries]
+args = ["test", "--all-features", "--workspace", "@@remove-empty(RELEASE_FLAG)"]
+[tasks.coverage]
+category = "Test"
+description = "Generate a coverage report"
+dependencies = ["install-llvm-cov"]
+command = "cargo"
+args = ["llvm-cov", "--lcov", "--output-path", "lcov.info"]
+[tasks.test-cross]
 private = true
-dependencies = [
-    "build-aarch64-unknown-linux-gnu",
-    "build-x86_64-unknown-linux-gnu",
+dependencies = ["install-cross"]
+command = "cross"
+args = [
+    "test",
+    "--all-features",
+    "--workspace",
+    "--target",
+    "${TARGET}",
+    "@@remove-empty(RELEASE_FLAG)",
 ]
-description = "Collect compiled binaries into central location for docker buildx"
-script = '''
-#!/usr/bin/env bash
-mkdir -p ./binaries
-cp target/x86_64-unknown-linux-gnu/${TARGET_FOLDER}/${CARGO_MAKE_CRATE_NAME} binaries/${CARGO_MAKE_CRATE_NAME}_amd64
-cp target/aarch64-unknown-linux-gnu/${TARGET_FOLDER}/${CARGO_MAKE_CRATE_NAME} binaries/${CARGO_MAKE_CRATE_NAME}_arm64
-'''
+[tasks.test-x86_64-unknown-linux-gnu]
+private = false
+category = "Test"
+env = { "TARGET" = "x86_64-unknown-linux-gnu" }
+extend = "test-cross"
+[tasks.test-aarch64-unknown-linux-gnu]
+private = false
+category = "Test"
+env = { "TARGET" = "aarch64-unknown-linux-gnu" }
+extend = "test-cross"
 
+
+# DOCKER CONTAINERS
+[tasks.docker-setup-builder]
+private = true
+category = "Docker"
+command = "docker"
+args = [
+    "buildx",
+    "create",
+    "--name",
+    "clouddns-nat-helper",
+    "--driver",
+    "docker-container",
+]
+ignore_errors = true
+[tasks.docker]
+category = "Docker"
+description = "Build a docker image for your local platform"
+dependencies = ["build"]
+command = "docker"
+args = [
+    "buildx",
+    "build",
+    "--build-arg",
+    "PROFILE_DIR=${PROFILE_DIR}",
+    "--tag",
+    "${DOCKER_TAG}",
+    ".",
+]
+[tasks.docker-cross]
+private = true
+command = "docker"
+args = [
+    "buildx",
+    "build",
+    "--builder",
+    "clouddns-nat-helper",
+    "--platform",
+    "${DOCKER_PLATFORM}",
+    "--build-arg",
+    "PROFILE_DIR=${PROFILE_DIR}",
+    "--build-arg",
+    "RUST_TARGET=${RUST_TARGET}",
+    "--tag",
+    "${DOCKER_TAG}",
+    ".",
+]
+[tasks.docker-amd64]
+dependencies = ["build-x86_64-unknown-linux-gnu", "docker-setup-builder"]
+category = "Docker"
+private = false
+env = { "RUST_TARGET" = "x86_64-unknown-linux-gnu", "DOCKER_PLATFORM" = "linux/amd64" }
+extend = "docker-cross"
+[tasks.docker-arm64]
+dependencies = ["build-aarch64-unknown-linux-gnu", "docker-setup-builder"]
+category = "Docker"
+private = false
+env = { "RUST_TARGET" = "aarch64-unknown-linux-gnu", "DOCKER_PLATFORM" = "linux/arm64" }
+extend = "docker-cross"
 
 
 # MISC
 [tasks.docs]
+category = "Miscellaneous"
 description = "Generate rustdoc for the project"
 command = "cargo"
-args = ["doc", "--no-deps"]
-
-[tasks.coverage]
-description = "Generate a coverage report"
-install_crate = "cargo-llvm-cov"
-command = "cargo"
-args = ["llvm-cov", "--lcov", "--output-path", "lcov.info"]
-
-[tasks.clean]
-description = "Cleanup"
-dependencies = ["clean-docker-multiarch"]
-command = "cargo"
-args = ["clean"]
-
-[tasks.clean-docker-multiarch]
-private = true
-command = "rm"
-args = ["-rf", "./binaries"]
+args = ["doc", "--no-deps", "--workspace"]

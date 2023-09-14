@@ -1,4 +1,0 @@
-[build]
-# Too noisy
-#rustflags = ["-Dwarnings"]
-rustdocflags = ["-Dwarnings"]

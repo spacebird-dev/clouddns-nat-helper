@@ -1,30 +1,23 @@
-FROM debian:bullseye-slim as builder
+# NOTE: This dockerfile relies on precompiled binaries already existing on the host.
+# Select the correct binary and put it to a predictable location
+FROM debian:bullseye-slim as arch-selector
 
 ARG TARGETPLATFORM
-ARG binary_dir
-ENV BINARY_DIR=${binary_dir}
 
-ARG binary_name
-ENV BINARY_NAME=${binary_name}
-
-COPY ${BINARY_DIR}/* /tmp/binaries/
-# Select the correct binary and put it to a predictable location
+COPY target /tmp/target/
 RUN case ${TARGETPLATFORM} in \
-    "linux/amd64") export TARGET="amd64" ;; \
-    "linux/arm64") export TARGET="arm64" ;; \
+    "linux/amd64") export RUST_TARGET="x86_64-unknown-linux-gnu" ;; \
+    "linux/arm64") export RUST_TARGET="aarch64-unknown-linux-gnu" ;; \
     esac; \
-    mv /tmp/binaries/${BINARY_NAME}_${TARGET} /root/${BINARY_NAME}
+    mv /tmp/target/${RUST_TARGET}/release/clouddns-nat-helper /tmp/clouddns-nat-helper
 
 
 FROM debian:bullseye-slim
 
-ARG binary_name
-ENV BINARY_NAME=${binary_name}
-
-COPY --from=builder /root/${BINARY_NAME} /usr/local/bin/
-RUN chmod +x /usr/local/bin/${BINARY_NAME}
+COPY --from=arch-selector /tmp/clouddns-nat-helper /usr/local/bin/
+RUN chmod +x /usr/local/bin/clouddns-nat-helper
 
 # run unprivileged
 USER 1001
 
-CMD ["${BINARY_NAME}"]
+CMD ["clouddns-nat-helper"]
