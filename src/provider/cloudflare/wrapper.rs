@@ -3,8 +3,6 @@
 use cloudflare::{
     endpoints::{self},
     framework::{
-        self,
-        apiclient::ApiClient,
         auth::Credentials,
         response::{ApiFailure, ApiResponse},
         Environment, HttpApiClient, HttpApiClientConfig,
@@ -18,7 +16,7 @@ const CLOUDFLARE_RECORD_PAGE_SIZE: u16 = 5000;
 
 /// Internal wrapper around the Cloudflare API. Provides some convenience features such as paged requests
 pub struct CloudflareWrapper {
-    client: framework::HttpApiClient,
+    client: HttpApiClient,
     cache: FinderCache,
 }
 
