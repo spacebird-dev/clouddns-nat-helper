@@ -64,7 +64,6 @@ impl TxtRegistry<'_> {
                 warn!("Conflicting ownership of domain {} - extra ownership records were found:{:?}.\n Considering this domain taken", domain.name, owner_records);
                 Ownership::Taken
             }
-            _ => unreachable!(),
         }
     }
 
@@ -313,7 +312,7 @@ mod tests {
         let rg = TxtRegistry::from_provider(TENANT.to_string(), provider_mock.as_ref()).unwrap();
 
         assert!(rg.owned_domains().len() == 1);
-        assert_eq!(rg.owned_domains().get(0).unwrap(), &owned_d());
+        assert_eq!(rg.owned_domains().first().unwrap(), &owned_d());
     }
 
     #[test]
@@ -410,7 +409,7 @@ mod tests {
         rg.release(available_d().name.as_str()).unwrap();
 
         assert!(rg.owned_domains().len() == 1);
-        assert!(rg.owned_domains().get(0).unwrap() == &owned_d());
+        assert!(rg.owned_domains().first().unwrap() == &owned_d());
     }
 
     #[test]
@@ -426,7 +425,7 @@ mod tests {
         rg.release(taken_d().name.as_str()).unwrap_err();
 
         assert!(rg.owned_domains().len() == 1);
-        assert!(rg.owned_domains().get(0).unwrap() == &owned_d());
+        assert!(rg.owned_domains().first().unwrap() == &owned_d());
     }
 
     #[test]
@@ -468,6 +467,6 @@ mod tests {
         rg.release(conflict_d().name.as_str()).unwrap_err();
 
         assert!(rg.owned_domains().len() == 1);
-        assert!(rg.owned_domains().get(0).unwrap() == &owned_d());
+        assert!(rg.owned_domains().first().unwrap() == &owned_d());
     }
 }
