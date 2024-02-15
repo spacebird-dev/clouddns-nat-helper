@@ -32,7 +32,7 @@ pub struct HostnameSourceConfig {
 impl Ipv4Source for HostnameSource {
     fn addr(&self) -> Result<Ipv4Addr, SourceError> {
         match self.client.query_a(self.hostname.as_str()) {
-            Ok(addrs) => match addrs.get(0) {
+            Ok(addrs) => match addrs.first() {
                 Some(a) => Ok(a.to_owned()),
                 None => Err(SourceError {
                     msg: format!(

@@ -199,7 +199,6 @@ fn run_job(cli: Cli) -> Result<(), ()> {
                 res.failures
             );
         }
-        (_, _) => unreachable!(),
     }
 
     Ok(())
