@@ -95,7 +95,7 @@ jobs:
           cargo make -p release test-${{ matrix.target.name }}
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         with:
           name: clouddns-nat-helper.${{ matrix.target.name }}
@@ -144,12 +144,12 @@ jobs:
         run: |
           mkdir -p target/x86_64-unknown-linux-gnu/release target/aarch64-unknown-linux-gnu/release
       - name: Get x86_64-unknown-linux-gnu artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: clouddns-nat-helper.x86_64-unknown-linux-gnu
           path: target/x86_64-unknown-linux-gnu/release/clouddns-nat-helper
       - name: Get aarch64-unknown-linux-gnu artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: clouddns-nat-helper.aarch64-unknown-linux-gnu
           path: target/aarch64-unknown-linux-gnu/release/clouddns-nat-helper
@@ -207,7 +207,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Get target binary artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: clouddns-nat-helper.${{ matrix.target.name }}
           path: /tmp/clouddns-nat-helper
