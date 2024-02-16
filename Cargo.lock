@@ -57,9 +57,9 @@ dependencies = [
 
 [[package]]
 name = "anstyle"
-version = "1.0.2"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15c4c2c83f81532e5845a733998b6971faca23490340a418e9b72a3ec9de12ea"
+checksum = "8901269c6307e8d93993578286ac0edf7f195079ffff5ebdeea6a59ffb7e36bc"
 
 [[package]]
 name = "anstyle-parse"
@@ -698,37 +698,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "env_logger"
-version = "0.10.1"
+name = "env_filter"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95b3f3e67048839cb0d0781f445682a35113da7121f7c949db0e2be96a4fbece"
+checksum = "a009aa4810eb158359dda09d0c87378e4bbb89b5a801f016885a4707ba24f7ea"
 dependencies = [
- "humantime",
- "is-terminal",
  "log",
  "regex",
- "termcolor",
 ]
 
 [[package]]
-name = "errno"
-version = "0.2.8"
+name = "env_logger"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f639046355ee4f37944e44f60642c6f3a7efa3cf6b78c78a0d989a8ce6c396a1"
+checksum = "6c012a26a7f605efc424dd53697843a72be7dc86ad2d01f7814337794a12231d"
 dependencies = [
- "errno-dragonfly",
- "libc",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "errno-dragonfly"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa68f1b12764fab894d2755d2518754e71b4fd80ecfb822714a1206c2aab39bf"
-dependencies = [
- "cc",
- "libc",
+ "anstream",
+ "anstyle",
+ "env_filter",
+ "humantime",
+ "log",
 ]
 
 [[package]]
@@ -1064,32 +1053,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "io-lifetimes"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7d6c6f8c91b4b9ed43484ad1a938e393caf35960fce7f82a040497207bd8e9e"
-dependencies = [
- "libc",
- "windows-sys 0.42.0",
-]
-
-[[package]]
 name = "ipnet"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30e22bd8629359895450b59ea7a776c850561b96a3b1d31321c1949d9e6c9146"
-
-[[package]]
-name = "is-terminal"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28dfb6c8100ccc63462345b67d1bbc3679177c75ee4bf59bf29c8b1d110b8189"
-dependencies = [
- "hermit-abi",
- "io-lifetimes",
- "rustix",
- "windows-sys 0.42.0",
-]
 
 [[package]]
 name = "itertools"
@@ -1163,12 +1130,6 @@ checksum = "ecd207c9c713c34f95a097a5b029ac2ce6010530c7b49d7fea24d977dede04f5"
 dependencies = [
  "cc",
 ]
-
-[[package]]
-name = "linux-raw-sys"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f051f77a7c8e6957c0696eac88f26b0117e54f52d3fc682ab19397a8812846a4"
 
 [[package]]
 name = "log"
@@ -1519,20 +1480,6 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "rustix"
-version = "0.36.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4fdebc4b395b7fbb9ab11e462e20ed9051e7b16e42d24042c776eca0ac81b03"
-dependencies = [
- "bitflags",
- "errno",
- "io-lifetimes",
- "libc",
- "linux-raw-sys",
- "windows-sys 0.42.0",
 ]
 
 [[package]]
