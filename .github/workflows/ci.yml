@@ -123,7 +123,7 @@ jobs:
         run: cargo make coverage
 
       - name: Upload coverage report
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           files: ./lcov.info
 
