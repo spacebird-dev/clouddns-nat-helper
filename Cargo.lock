@@ -652,9 +652,9 @@ dependencies = [
 
 [[package]]
 name = "dnsclient"
-version = "0.1.18"
+version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2f14b3b465bc4911d0d758f8c6d55cfce09dd9663a8c103fe7e13b22a744fa1"
+checksum = "8d4f6b3f88ed75d8745ae4450725c3d3b27d26060d0010b921c7a1a976c45d80"
 dependencies = [
  "async-std",
  "dnssector",
