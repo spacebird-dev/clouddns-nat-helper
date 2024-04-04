@@ -105,7 +105,7 @@ impl Display for DnsRecord {
 }
 impl PartialEq<&DnsRecord> for DnsRecord {
     fn eq(&self, other: &&DnsRecord) -> bool {
-        self == other
+        self.domain_name == other.domain_name && self.content == other.content
     }
 }
 

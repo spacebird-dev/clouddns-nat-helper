@@ -306,14 +306,14 @@ mod tests {
 
     #[test]
     fn should_generate_valid_plan_sync() {
-        let create_expected = vec![Action::ClaimAndUpdate(available_d().name, DESIRED_IP)];
-        let update_expected = vec![
+        let create_expected = [Action::ClaimAndUpdate(available_d().name, DESIRED_IP)];
+        let update_expected = [
             Action::Update(owned_multiple_a_without_correct_d().name, DESIRED_IP),
             Action::Update(owned_to_insert_d().name, DESIRED_IP),
             Action::Update(owned_to_update_d().name, DESIRED_IP),
             Action::Update(owned_multiple_a_with_correct_d().name, DESIRED_IP),
         ];
-        let delete_expected = vec![
+        let delete_expected = [
             Action::DeleteAndRelease(owned_to_delete_correct_a_d().name),
             Action::DeleteAndRelease(owned_to_delete_incorrect_a_d().name),
             Action::DeleteAndRelease(owned_to_delete_multiple_a_with_correct_d().name),
@@ -347,9 +347,9 @@ mod tests {
 
     #[test]
     fn should_generate_valid_plan_create_only() {
-        let create_expected = vec![Action::ClaimAndUpdate(available_d().name, DESIRED_IP)];
-        let update_expected = vec![Action::Update(owned_to_insert_d().name, DESIRED_IP)];
-        let delete_expected: Vec<Action> = vec![];
+        let create_expected = [Action::ClaimAndUpdate(available_d().name, DESIRED_IP)];
+        let update_expected = [Action::Update(owned_to_insert_d().name, DESIRED_IP)];
+        let delete_expected = [];
 
         let plan = Plan::generate(mock().as_mut(), DESIRED_IP, Policy::CreateOnly);
 
@@ -378,14 +378,14 @@ mod tests {
 
     #[test]
     fn should_generate_valid_plan_upsert() {
-        let create_expected = vec![Action::ClaimAndUpdate(available_d().name, DESIRED_IP)];
-        let update_expected = vec![
+        let create_expected = [Action::ClaimAndUpdate(available_d().name, DESIRED_IP)];
+        let update_expected = [
             Action::Update(owned_multiple_a_without_correct_d().name, DESIRED_IP),
             Action::Update(owned_to_insert_d().name, DESIRED_IP),
             Action::Update(owned_to_update_d().name, DESIRED_IP),
             Action::Update(owned_multiple_a_with_correct_d().name, DESIRED_IP),
         ];
-        let delete_expected: Vec<Action> = vec![];
+        let delete_expected = [];
 
         let plan = Plan::generate(mock().as_mut(), DESIRED_IP, Policy::Upsert);
 
