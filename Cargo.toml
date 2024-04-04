@@ -20,12 +20,12 @@ exclude = [
 
 [dev-dependencies]
 mockall = "0.12.1"
-serde_json = "1.0.114"
-chrono = "0.4.35"
+serde_json = "1.0.115"
+chrono = "0.4.37"
 totems = "0.2.7"
 
 [dependencies]
-clap = { version = "4.5.3", features = ["derive", "env"] }
+clap = { version = "4.5.4", features = ["derive", "env"] }
 cloudflare = { version = "0.11.0", features = [
     "rustls-tls",
     "blocking",
@@ -37,7 +37,7 @@ itertools = "0.12.1"
 log = "0.4.21"
 mockall_double = "0.3.1"
 thiserror = "1.0.58"
-tokio = { version = "1.36.0", features = ["macros"] }
+tokio = { version = "1.37.0", features = ["macros"] }
 
 [patch.crates-io]
 # using out fork until this gets implemented: https://github.com/cloudflare/cloudflare-rs/issues/219
