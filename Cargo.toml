@@ -20,7 +20,7 @@ exclude = [
 
 [dev-dependencies]
 mockall = "0.12.1"
-serde_json = "1.0.115"
+serde_json = "1.0.116"
 chrono = "0.4.38"
 totems = "0.2.7"
 
