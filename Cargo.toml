@@ -33,7 +33,7 @@ cloudflare = { version = "0.11.0", features = [
 dnsclient = "0.1.19"
 env_logger = "0.11.3"
 http = "0.2.12"
-itertools = "0.12.1"
+itertools = "0.13.0"
 log = "0.4.21"
 mockall_double = "0.3.1"
 thiserror = "1.0.59"
