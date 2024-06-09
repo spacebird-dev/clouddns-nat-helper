@@ -222,7 +222,6 @@ mod tests {
                 custom_certificate_quota: 0,
                 page_rule_quota: 0,
                 phishing_detected: false,
-                multiple_railguns_allowed: false,
             },
             modified_on: chrono::offset::Utc::now(),
             name_servers: vec!["cash.ns.example.com".to_string()],
