@@ -41,4 +41,4 @@ tokio = { version = "1.37.0", features = ["macros"] }
 
 [patch.crates-io]
 # using out fork until this gets implemented: https://github.com/cloudflare/cloudflare-rs/issues/219
-cloudflare = { git = "https://github.com/spacebird-dev/cloudflare-rs", rev = "6188c63ed3c5716f86787e13d668cd75e6758c07" }
+cloudflare = { git = "https://github.com/spacebird-dev/cloudflare-rs", rev = "f0311d2dee130b47861e50b453c207bfee0449e3" }

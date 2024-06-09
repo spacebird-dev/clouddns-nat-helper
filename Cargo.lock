@@ -493,7 +493,7 @@ dependencies = [
 [[package]]
 name = "cloudflare"
 version = "0.11.0"
-source = "git+https://github.com/spacebird-dev/cloudflare-rs?rev=6188c63ed3c5716f86787e13d668cd75e6758c07#6188c63ed3c5716f86787e13d668cd75e6758c07"
+source = "git+https://github.com/spacebird-dev/cloudflare-rs?rev=f0311d2dee130b47861e50b453c207bfee0449e3#f0311d2dee130b47861e50b453c207bfee0449e3"
 dependencies = [
  "chrono",
  "http",
