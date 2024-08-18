@@ -244,7 +244,6 @@ mod tests {
     fn endpoint() -> endpoints::dns::DnsRecord {
         endpoints::dns::DnsRecord {
             meta: endpoints::dns::Meta { auto_added: false },
-            locked: false,
             name: "domain2.example.org".to_string(),
             ttl: 60,
             zone_id: "123456".to_string(),
