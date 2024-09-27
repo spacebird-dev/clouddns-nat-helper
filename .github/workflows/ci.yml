@@ -18,7 +18,7 @@ on:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out codebase
         uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
 
   docs:
     name: "Generate rustdoc"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out codebase
         uses: actions/checkout@v4
@@ -66,7 +66,7 @@ jobs:
 
   build-test:
     name: Build and Test (${{ matrix.target.name }})
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         target:
@@ -103,7 +103,7 @@ jobs:
 
   coverage:
     name: Create Test Coverage Report
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out codebase
         uses: actions/checkout@v4
@@ -130,7 +130,7 @@ jobs:
 
   docker:
     name: "Publish Docker Image"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     needs:
       - build-test
@@ -195,7 +195,7 @@ jobs:
   gh-release-artifacts:
     name: Upload ${{ matrix.target }} to GH Release
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - build-test
     strategy:
@@ -230,7 +230,7 @@ jobs:
   publish-crates:
     name: "Publish to crates.io"
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - build-test
     steps:
