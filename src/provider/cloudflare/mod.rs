@@ -141,10 +141,7 @@ impl DnsProvider for CloudflareProvider {
     }
 
     fn apply(&self, action: &crate::plan::Action) -> Result<(), ProviderError> {
-        let current_records = match self.records() {
-            Ok(current) => current,
-            Err(e) => return Err(e),
-        };
+        let current_records = self.records()?;
 
         match action {
             crate::plan::Action::ClaimAndUpdate(domain, ip) => self.create_record(&DnsRecord {
