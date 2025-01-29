@@ -243,7 +243,6 @@ mod tests {
             meta: endpoints::dns::Meta { auto_added: false },
             name: "domain2.example.org".to_string(),
             ttl: 60,
-            zone_id: "123456".to_string(),
             modified_on: chrono::offset::Utc::now(),
             created_on: chrono::offset::Utc::now(),
             proxiable: true,
