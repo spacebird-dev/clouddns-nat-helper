@@ -251,7 +251,6 @@ mod tests {
             },
             id: "1234556".to_string(),
             proxied: false,
-            zone_name: "example.org".to_string(),
         }
     }
 
