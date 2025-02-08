@@ -242,7 +242,7 @@ mod tests {
     }
     fn endpoint() -> endpoints::dns::DnsRecord {
         endpoints::dns::DnsRecord {
-            meta: endpoints::dns::Meta { auto_added: false },
+            meta: endpoints::dns::Meta {},
             name: "domain2.example.org".to_string(),
             ttl: 60,
             modified_on: chrono::offset::Utc::now(),
