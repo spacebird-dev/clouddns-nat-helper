@@ -195,6 +195,7 @@ impl Provider for CloudflareProvider {}
 mod tests {
     use std::{net::Ipv4Addr, vec};
 
+    use chrono::Utc;
     use cloudflare::{
         endpoints::{self, account::AccountDetails},
         framework::response::ApiSuccess,
@@ -236,6 +237,7 @@ mod tests {
             status: endpoints::zone::Status::Active,
             vanity_name_servers: None,
             zone_type: endpoints::zone::Type::Full,
+            activated_on: Utc::now(),
         }
     }
     fn endpoint() -> endpoints::dns::DnsRecord {
