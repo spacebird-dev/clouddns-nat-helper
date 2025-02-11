@@ -439,7 +439,7 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "clouddns-nat-helper"
-version = "0.2.18"
+version = "0.2.19"
 dependencies = [
  "chrono",
  "clap",
