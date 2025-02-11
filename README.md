@@ -4,6 +4,13 @@
 
 # clouddns-nat-helper
 
+**⚠️ DEPRECATION NOTICE ⚠️**
+
+This project has been deprecated and is now inactive.
+The main use case for this project was to enable setting A records for self-hosted dual-stack Kubernetes cluster behind NAT.
+This can now be done with [`externalip-manager`](https://github.com/spacebird-dev/externalip-manager), which does not require access to DNS and can instead serve the correct IPs to external-dns directly.
+Users are advised to migrate as this project will not be maintained.
+
 A utility to automatically generate Ipv4 `A` DNS records for hosts based on existing AAAA records in a DNS zone.
 
 ## Use Case
